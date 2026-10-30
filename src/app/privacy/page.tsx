@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
+import { APP_CONFIG } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - Attachment & Shadow Lab",
@@ -38,7 +39,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="font-semibold text-base text-stone-900 mb-2">4. Data Deletion Rights</h2>
           <p>
-            You may request complete removal of your email and generated report records at any time by emailing privacy@yourdomain.com.
+            You may request complete removal of your email and generated report records at any time by emailing {APP_CONFIG.privacyEmail}.
           </p>
         </section>
       </div>

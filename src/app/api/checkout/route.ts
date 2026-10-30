@@ -4,7 +4,9 @@ export const runtime = "edge";
 
 import { stripe } from "@/lib/stripe";
 import { signResultToken } from "@/lib/jwt";
-import { AttachmentArchetype } from "@/types/assessment";
+import { getAppUrl } from "@/lib/url";
+import { calculateAssessmentScores } from "@/lib/scoring";
+import { AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 
 const VALID_ARCHETYPES: AttachmentArchetype[] = [
   "Secure",
@@ -13,48 +15,35 @@ const VALID_ARCHETYPES: AttachmentArchetype[] = [
   "Fearful-Avoidant",
 ];
 
+const VALID_RELATIONSHIP_STATUSES: RelationshipStatus[] = [
+  "single",
+  "dating",
+  "in_relationship",
+  "complicated",
+  "healing",
+];
+
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-function getAppUrl(req: NextRequest): string {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  // 1. Prioritize explicitly configured NEXT_PUBLIC_APP_URL (reject localhost if in production)
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredUrl) {
-    const isLocalhost = configuredUrl.includes("localhost") || configuredUrl.includes("127.0.0.1");
-    if (!(isProduction && isLocalhost)) {
-      return configuredUrl.replace(/\/+$/, "");
-    }
-  }
-
-  // 2. Derive dynamically from reverse proxy headers if available
-  const forwardedHost = req.headers.get("x-forwarded-host");
-  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
-
-  if (forwardedHost) {
-    const host = forwardedHost.split(",")[0].trim();
-    return `${forwardedProto}://${host}`.replace(/\/+$/, "");
-  }
-
-  const host = req.headers.get("host");
-  if (host) {
-    const isLocalhost = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-    const proto = req.headers.get("x-forwarded-proto") || (isLocalhost ? "http" : "https");
-    return `${proto}://${host}`.replace(/\/+$/, "");
-  }
-
-  // 3. Fallback to req.nextUrl.origin
-  if (req.nextUrl?.origin && req.nextUrl.origin !== "null") {
-    return req.nextUrl.origin.replace(/\/+$/, "");
-  }
-
-  return "http://localhost:3000";
-}
-
 export async function POST(req: NextRequest) {
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const { email, anxiousRaw, avoidantRaw, anxiousPercent, avoidantPercent, archetype } = body;
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON request body" }, { status: 400 });
+  }
+
+  try {
+    const {
+      email,
+      anxiousRaw,
+      avoidantRaw,
+      anxiousPercent,
+      avoidantPercent,
+      archetype,
+      relationshipStatus,
+      answers,
+    } = body || {};
 
     // 1. Validate Archetype Whitelist
     if (!archetype || !VALID_ARCHETYPES.includes(archetype as AttachmentArchetype)) {
@@ -110,21 +99,51 @@ export async function POST(req: NextRequest) {
       validatedEmail = email.trim();
     }
 
-    const appUrl = getAppUrl(req);
-    const resultId = `res_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // 5. Validate Relationship Status
+    const validatedRelationshipStatus: RelationshipStatus =
+      typeof relationshipStatus === "string" && VALID_RELATIONSHIP_STATUSES.includes(relationshipStatus as RelationshipStatus)
+        ? (relationshipStatus as RelationshipStatus)
+        : "single";
 
-    // Create an unlocked signed token that can be verified in report upon completion
-    const unlockedToken = await signResultToken({
-      resultId,
-      email: validatedEmail,
-      anxiousRaw: numAnxiousRaw,
-      avoidantRaw: numAvoidantRaw,
-      anxiousPercent: numAnxiousPercent,
-      avoidantPercent: numAvoidantPercent,
-      archetype: archetype as AttachmentArchetype,
-      isUnlocked: true,
-      createdAt: Date.now(),
-    });
+    // 6. Validate & Sanitize 24 Questions Answer Dictionary (strict bounds [1, 24] and integer Likert [1, 5])
+    let serializedAnswers = "{}";
+    const validatedAnswers: Record<number, number> = {};
+    if (answers && typeof answers === "object") {
+      for (const [key, val] of Object.entries(answers)) {
+        const qId = Number(key);
+        const scoreVal = Number(val);
+        if (
+          Number.isInteger(qId) &&
+          qId >= 1 &&
+          qId <= 24 &&
+          Number.isInteger(scoreVal) &&
+          scoreVal >= 1 &&
+          scoreVal <= 5
+        ) {
+          validatedAnswers[qId] = scoreVal;
+        }
+      }
+      serializedAnswers = JSON.stringify(validatedAnswers);
+    }
+
+    // 7. Authoritative Server-Side Score Recalculation
+    let authoritativeArchetype: AttachmentArchetype = archetype as AttachmentArchetype;
+    let authoritativeAnxiousRaw = numAnxiousRaw;
+    let authoritativeAvoidantRaw = numAvoidantRaw;
+    let authoritativeAnxiousPercent = numAnxiousPercent;
+    let authoritativeAvoidantPercent = numAvoidantPercent;
+
+    if (Object.keys(validatedAnswers).length > 0) {
+      const computedScores = calculateAssessmentScores(validatedAnswers, validatedRelationshipStatus);
+      authoritativeArchetype = computedScores.archetype;
+      authoritativeAnxiousRaw = computedScores.anxiousRaw;
+      authoritativeAvoidantRaw = computedScores.avoidantRaw;
+      authoritativeAnxiousPercent = computedScores.anxiousPercent;
+      authoritativeAvoidantPercent = computedScores.avoidantPercent;
+    }
+
+    const appUrl = getAppUrl(req);
+    const resultId = `res_${Date.now()}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
     // Check if Stripe Secret is placeholder (Development/Demo Mode)
     const isProduction = process.env.NODE_ENV === "production";
@@ -147,13 +166,28 @@ export async function POST(req: NextRequest) {
       console.warn(
         "[Stripe Warning] STRIPE_SECRET_KEY not configured. Simulating successful instant checkout for preview in development."
       );
+      // In dev mock mode only, issue a signed token for demonstration
+      const mockUnlockedToken = await signResultToken({
+        resultId,
+        email: validatedEmail,
+        anxiousRaw: authoritativeAnxiousRaw,
+        avoidantRaw: authoritativeAvoidantRaw,
+        anxiousPercent: authoritativeAnxiousPercent,
+        avoidantPercent: authoritativeAvoidantPercent,
+        archetype: authoritativeArchetype,
+        relationshipStatus: validatedRelationshipStatus,
+        answers: validatedAnswers,
+        isUnlocked: true,
+        createdAt: Date.now(),
+      });
       return NextResponse.json({
-        url: `${appUrl}/report/${resultId}?token=${unlockedToken}&mock_success=true`,
+        url: `${appUrl}/report/${resultId}?token=${mockUnlockedToken}&mock_success=true`,
         mock: true,
       });
     }
 
     // Official Stripe Checkout Session Creation ($14.99 USD)
+    // NOTE: We NEVER issue an unlocked token in success_url before payment verification
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: validatedEmail,
@@ -164,7 +198,7 @@ export async function POST(req: NextRequest) {
             unit_amount: 1499, // $14.99 in cents
             product_data: {
               name: "Full 12-Page Attachment & Relationship Shadow Assessment Report",
-              description: `Deep subconscious blueprint, 30-Day Rewiring Plan, and Partner Compatibility Analysis for ${archetype}.`,
+              description: `Deep subconscious blueprint, 30-Day Rewiring Plan, and Partner Compatibility Analysis for ${authoritativeArchetype}.`,
               tax_code: "txcd_10000000",
               images: [
                 "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=600&q=80",
@@ -178,13 +212,16 @@ export async function POST(req: NextRequest) {
         resultId,
         email: validatedEmail || "",
         appUrl,
-        archetype,
-        anxiousRaw: String(numAnxiousRaw),
-        avoidantRaw: String(numAvoidantRaw),
-        anxiousPercent: String(numAnxiousPercent),
-        avoidantPercent: String(numAvoidantPercent),
+        archetype: authoritativeArchetype,
+        relationshipStatus: validatedRelationshipStatus,
+        anxiousRaw: String(authoritativeAnxiousRaw),
+        avoidantRaw: String(authoritativeAvoidantRaw),
+        anxiousPercent: String(authoritativeAnxiousPercent),
+        avoidantPercent: String(authoritativeAvoidantPercent),
+        answers: serializedAnswers,
       },
-      success_url: `${appUrl}/report/${resultId}?session_id={CHECKOUT_SESSION_ID}&token=${unlockedToken}`,
+      // Secure success_url: only session_id is returned, verification happens server-side via Stripe API
+      success_url: `${appUrl}/report/${resultId}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/results/teaser?canceled=true`,
     });
 

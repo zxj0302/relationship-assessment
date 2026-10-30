@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { StoredResultTokenPayload, AttachmentArchetype } from "@/types/assessment";
+import { StoredResultTokenPayload, AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 
 function getSecretKey(): Uint8Array {
   const secret = process.env.TOKEN_SECRET;
@@ -19,7 +19,7 @@ export async function signResultToken(payload: StoredResultTokenPayload): Promis
   const jwt = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("30d") // Valid for 30 days
+    .setExpirationTime("100y") // Multi-decade lifetime for permanent customer report access
     .sign(secretKey);
 
   return jwt;
@@ -29,6 +29,12 @@ export async function verifyResultToken(token: string): Promise<StoredResultToke
   try {
     const secretKey = getSecretKey();
     const { payload } = await jwtVerify(token, secretKey);
+
+    let parsedAnswers: Record<number, number> | undefined = undefined;
+    if (payload.answers && typeof payload.answers === "object") {
+      parsedAnswers = payload.answers as Record<number, number>;
+    }
+
     return {
       resultId: payload.resultId as string,
       email: payload.email as string | undefined,
@@ -37,6 +43,8 @@ export async function verifyResultToken(token: string): Promise<StoredResultToke
       anxiousPercent: Number(payload.anxiousPercent),
       avoidantPercent: Number(payload.avoidantPercent),
       archetype: payload.archetype as AttachmentArchetype,
+      relationshipStatus: payload.relationshipStatus as RelationshipStatus | undefined,
+      answers: parsedAnswers,
       isUnlocked: Boolean(payload.isUnlocked),
       createdAt: Number(payload.createdAt || Date.now()),
     };

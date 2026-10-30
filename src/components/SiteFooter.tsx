@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShieldCheck, HeartHandshake } from "lucide-react";
+import { APP_CONFIG } from "@/lib/constants";
 
 export function SiteFooter() {
   return (
@@ -22,7 +23,7 @@ export function SiteFooter() {
               14-Day Money-Back Guarantee
             </h4>
             <p className="text-stone-500 text-xs leading-relaxed">
-              We offer a 100% hassle-free 14-day refund guarantee. If you are not satisfied with your comprehensive assessment report, contact support@yourdomain.com for an immediate full refund.
+              We offer a 100% hassle-free 14-day refund guarantee. If you are not satisfied with your comprehensive assessment report, contact {APP_CONFIG.supportEmail} for an immediate full refund.
             </p>
           </div>
 

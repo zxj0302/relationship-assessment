@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
+import { APP_CONFIG } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Terms of Service - Attachment & Shadow Lab",
@@ -38,7 +39,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-semibold text-base text-stone-900 mb-2">4. Contact Information</h2>
           <p>
-            For any inquiries or dispute resolution, contact our team at support@yourdomain.com.
+            For any inquiries or dispute resolution, contact our team at {APP_CONFIG.supportEmail}.
           </p>
         </section>
       </div>

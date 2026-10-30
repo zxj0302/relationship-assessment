@@ -3,9 +3,9 @@ import { verifyResultToken } from "@/lib/jwt";
 export const runtime = "edge";
 
 import { stripe } from "@/lib/stripe";
-import { calculateAssessmentScores } from "@/lib/scoring";
+import { calculateAssessmentScores, getPartnerAttractionWarning } from "@/lib/scoring";
 import { ARCHETYPE_PROFILES } from "@/data/archetypes";
-import { AttachmentArchetype, ScoreBreakdown } from "@/types/assessment";
+import { AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import { PremiumReportView } from "@/components/PremiumReportView";
 import Link from "next/link";
 import { Lock, ArrowRight } from "lucide-react";
@@ -28,24 +28,28 @@ interface ReportPageProps {
     resultId: string;
   };
   searchParams: {
-    token?: string;
-    session_id?: string;
-    mock_success?: string;
+    token?: string | string[];
+    session_id?: string | string[];
+    mock_success?: string | string[];
   };
 }
 
 export default async function ReportPage({ params, searchParams }: ReportPageProps) {
   const { resultId } = params;
-  const { token, session_id, mock_success } = searchParams;
+  const token = typeof searchParams.token === "string" ? searchParams.token : Array.isArray(searchParams.token) ? searchParams.token[0] : undefined;
+  const session_id = typeof searchParams.session_id === "string" ? searchParams.session_id : Array.isArray(searchParams.session_id) ? searchParams.session_id[0] : undefined;
+  const mock_success = typeof searchParams.mock_success === "string" ? searchParams.mock_success : Array.isArray(searchParams.mock_success) ? searchParams.mock_success[0] : undefined;
 
   let isUnlocked = false;
   let targetArchetype: AttachmentArchetype = "Anxious-Preoccupied";
-  let anxiousRaw = 4.15;
-  let avoidantRaw = 2.1;
-  let anxiousPercent = 79;
-  let avoidantPercent = 28;
+  let anxiousRaw = 3.0;
+  let avoidantRaw = 3.0;
+  let anxiousPercent = 50;
+  let avoidantPercent = 50;
+  let relationshipStatus: RelationshipStatus = "single";
+  let userAnswers: Record<number, number> | undefined = undefined;
 
-  // 1. Verify via signed JWT token if present (with strict resultId matching)
+  // 1. Verify via signed JWT token if present (with strict resultId and isUnlocked matching)
   if (token) {
     const verified = await verifyResultToken(token);
     if (verified && verified.isUnlocked && verified.resultId === resultId) {
@@ -65,10 +69,16 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
       if (!Number.isNaN(verified.avoidantPercent) && verified.avoidantPercent >= 0 && verified.avoidantPercent <= 100) {
         avoidantPercent = verified.avoidantPercent;
       }
+      if (verified.relationshipStatus) {
+        relationshipStatus = verified.relationshipStatus;
+      }
+      if (verified.answers && Object.keys(verified.answers).length > 0) {
+        userAnswers = verified.answers;
+      }
     }
   }
 
-  // 2. Verify via Stripe Checkout Session ID (ensuring session belongs to this resultId)
+  // 2. Verify via Stripe Checkout Session ID (ensuring payment status is explicitly 'paid')
   if (!isUnlocked && session_id && !session_id.includes("placeholder")) {
     try {
       const session = await stripe.checkout.sessions.retrieve(session_id);
@@ -95,6 +105,19 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
           if (!Number.isNaN(pctAvo) && pctAvo >= 0 && pctAvo <= 100) {
             avoidantPercent = pctAvo;
           }
+          if (session.metadata.relationshipStatus) {
+            relationshipStatus = session.metadata.relationshipStatus as RelationshipStatus;
+          }
+          if (session.metadata.answers) {
+            try {
+              const parsed = JSON.parse(session.metadata.answers);
+              if (parsed && typeof parsed === "object") {
+                userAnswers = parsed;
+              }
+            } catch (jsonErr) {
+              console.warn("Failed to parse answers from session metadata:", jsonErr);
+            }
+          }
         }
       }
     } catch (err) {
@@ -107,7 +130,7 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
     isUnlocked = true;
   }
 
-  // Guard: If not unlocked, display locked access gate
+  // Guard: If not verified/unlocked, display locked access gate
   if (!isUnlocked) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center">
@@ -140,31 +163,31 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
     );
   }
 
-  const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
+  // Accurately compute score breakdown based on genuine user answers without any hardcoded fake data
+  const scoreData = calculateAssessmentScores(userAnswers || {}, relationshipStatus);
 
-  // Generate complete multidimensional score data
-  const baseScores = calculateAssessmentScores(
-    targetArchetype === "Anxious-Preoccupied"
-      ? { 1: 5, 2: 5, 3: 5, 4: 4, 14: 5, 19: 5, 21: 5 }
-      : targetArchetype === "Dismissive-Avoidant"
-      ? { 7: 5, 8: 5, 9: 5, 10: 5, 13: 5, 22: 5 }
-      : targetArchetype === "Fearful-Avoidant"
-      ? { 1: 5, 7: 5, 13: 5, 14: 5, 18: 5, 20: 5 }
-      : { 5: 5, 11: 5, 16: 5, 23: 5 }
-  );
-
-  const scoreData: ScoreBreakdown = {
-    ...baseScores,
-    anxiousRaw,
-    anxiousPercent,
-    avoidantRaw,
-    avoidantPercent,
-    archetype: targetArchetype,
-    archetypeTitle: profile.archetypeTitle,
-    shadowSubtype: profile.shadowSubtype,
-    shortSummary: profile.shortSummary,
-    deepDive: profile.deepDive,
-  };
+  // If userAnswers was missing (edge fallback), overlay verified dimensional metrics
+  if (!userAnswers || Object.keys(userAnswers).length === 0) {
+    scoreData.anxiousRaw = anxiousRaw;
+    scoreData.avoidantRaw = avoidantRaw;
+    scoreData.anxiousPercent = anxiousPercent;
+    scoreData.avoidantPercent = avoidantPercent;
+    scoreData.archetype = targetArchetype;
+    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
+    scoreData.archetypeTitle = profile.archetypeTitle;
+    scoreData.shadowSubtype = profile.shadowSubtype;
+    scoreData.shortSummary = profile.shortSummary;
+    scoreData.deepDive = profile.deepDive;
+    scoreData.partnerAttractionWarning = getPartnerAttractionWarning(targetArchetype);
+  } else if (targetArchetype && scoreData.archetype !== targetArchetype) {
+    scoreData.archetype = targetArchetype;
+    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
+    scoreData.archetypeTitle = profile.archetypeTitle;
+    scoreData.shadowSubtype = profile.shadowSubtype;
+    scoreData.shortSummary = profile.shortSummary;
+    scoreData.deepDive = profile.deepDive;
+    scoreData.partnerAttractionWarning = getPartnerAttractionWarning(targetArchetype);
+  }
 
   return (
     <PremiumReportView

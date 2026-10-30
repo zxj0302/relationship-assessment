@@ -5,7 +5,8 @@ export const runtime = "edge";
 import { stripe } from "@/lib/stripe";
 import { sendReportUnlockEmail } from "@/lib/email";
 import { signResultToken } from "@/lib/jwt";
-import { AttachmentArchetype } from "@/types/assessment";
+import { getAppUrl } from "@/lib/url";
+import { AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import Stripe from "stripe";
 
 export async function POST(req: NextRequest) {
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
       console.warn("[Stripe Webhook] Webhook secret or signature missing; handling mock/dev event.");
       event = JSON.parse(payload) as Stripe.Event;
     } else {
-      event = stripe.webhooks.constructEvent(payload, sig, webhookSecret);
+      // Must use constructEventAsync in Edge Runtime environment
+      event = await stripe.webhooks.constructEventAsync(payload, sig, webhookSecret);
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Unknown verification failure";
@@ -78,6 +80,16 @@ export async function POST(req: NextRequest) {
     const numAvoidantRaw = Number(metadata.avoidantRaw) || 3.0;
     const numAnxiousPercent = Number(metadata.anxiousPercent) || 50;
     const numAvoidantPercent = Number(metadata.avoidantPercent) || 50;
+    const relationshipStatus = (metadata.relationshipStatus as RelationshipStatus) || undefined;
+
+    let parsedAnswers: Record<number, number> | undefined = undefined;
+    if (metadata.answers) {
+      try {
+        parsedAnswers = JSON.parse(metadata.answers);
+      } catch (parseErr) {
+        console.warn("[Stripe Webhook] Failed to parse answers metadata JSON:", parseErr);
+      }
+    }
 
     // Dynamically sign unlocked result token from verified session metadata
     let unlockedToken: string | null = null;
@@ -91,6 +103,8 @@ export async function POST(req: NextRequest) {
           anxiousPercent: numAnxiousPercent,
           avoidantPercent: numAvoidantPercent,
           archetype,
+          relationshipStatus,
+          answers: parsedAnswers,
           isUnlocked: true,
           createdAt: Date.now(),
         });
@@ -99,21 +113,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Prioritize dynamically inferred appUrl from checkout metadata, then env, preventing localhost leaks in production
-    let appUrl = metadata.appUrl?.trim() || "";
-    if (isProduction && (appUrl.includes("localhost") || appUrl.includes("127.0.0.1"))) {
-      appUrl = "";
-    }
-    if (!appUrl) {
-      const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-      if (configured && !(isProduction && (configured.includes("localhost") || configured.includes("127.0.0.1")))) {
-        appUrl = configured;
-      } else {
-        appUrl = isProduction ? "https://attachment-shadow-report.com" : "http://localhost:3000";
-      }
-    }
-    appUrl = appUrl.replace(/\/+$/, "");
-
+    const appUrl = getAppUrl(req, metadata.appUrl);
     const reportUrl = `${appUrl}/report/${resultId}?token=${unlockedToken || ""}`;
 
     console.log(

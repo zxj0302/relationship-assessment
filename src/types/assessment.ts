@@ -31,7 +31,7 @@ export type RelationshipStatus =
   | "healing";
 
 export interface ConflictShadowProfile {
-  shadowType: "Fight" | "Flight" | "Freeze" | "Fawn";
+  shadowType: "Fight" | "Flight" | "Freeze" | "Fawn" | "Secure";
   title: string;
   trigger: string;
   defaultReaction: string;
@@ -60,6 +60,7 @@ export interface ScoreBreakdown {
   conflictRaw: number;
   childhoodRaw: number;
   relationshipStatus?: RelationshipStatus;
+  answers?: Record<number, number>;
   archetype: AttachmentArchetype;
   archetypeTitle: string;
   shadowSubtype: string;
@@ -101,6 +102,7 @@ export interface StoredResultTokenPayload {
   avoidantPercent: number;
   archetype: AttachmentArchetype;
   relationshipStatus?: RelationshipStatus;
+  answers?: Record<number, number>;
   isUnlocked: boolean;
   createdAt: number;
 }

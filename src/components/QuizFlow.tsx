@@ -28,11 +28,15 @@ export function QuizFlow() {
   // Transition and debounce lock to prevent rapid clicks skipping questions
   const isTransitioningRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const milestoneTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+      }
+      if (milestoneTimerRef.current) {
+        clearTimeout(milestoneTimerRef.current);
       }
     };
   }, []);
@@ -62,13 +66,17 @@ export function QuizFlow() {
       clearTimeout(timerRef.current);
     }
 
+    if (milestoneTimerRef.current) {
+      clearTimeout(milestoneTimerRef.current);
+    }
+
     // Micro-milestone triggers
     if (currentIndex === 7) {
       setMilestoneNotice("Baseline Calibration Complete: Your intimacy & attachment radar is mapped.");
-      setTimeout(() => setMilestoneNotice(null), 2500);
+      milestoneTimerRef.current = setTimeout(() => setMilestoneNotice(null), 2500);
     } else if (currentIndex === 15) {
       setMilestoneNotice("Deep Pattern Detected: Calibrating your conflict response and defensive armor.");
-      setTimeout(() => setMilestoneNotice(null), 2500);
+      milestoneTimerRef.current = setTimeout(() => setMilestoneNotice(null), 2500);
     }
 
     // Auto-advance after small tactile delay for smooth UX
@@ -86,6 +94,9 @@ export function QuizFlow() {
   const handlePrev = () => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
+    }
+    if (milestoneTimerRef.current) {
+      clearTimeout(milestoneTimerRef.current);
     }
     isTransitioningRef.current = false;
     setIsTransitioning(false);
@@ -116,11 +127,15 @@ export function QuizFlow() {
     // Compute scores
     const breakdown = calculateAssessmentScores(finalAnswers, relationshipStatus || "single");
 
-    // Persist scores locally to support teaser page
+    // Persist scores and raw answers locally to support teaser page and checkout
     if (typeof window !== "undefined") {
       try {
         sessionStorage.setItem("assessment_scores", JSON.stringify(breakdown));
+        sessionStorage.setItem("assessment_answers", JSON.stringify(finalAnswers));
+        sessionStorage.setItem("assessment_relationship_status", relationshipStatus || "single");
         localStorage.setItem("latest_assessment_scores", JSON.stringify(breakdown));
+        localStorage.setItem("latest_assessment_answers", JSON.stringify(finalAnswers));
+        localStorage.setItem("latest_relationship_status", relationshipStatus || "single");
       } catch (storageErr) {
         console.warn("Local storage write failed:", storageErr);
       }

@@ -1,3 +1,5 @@
+import { APP_CONFIG } from "@/lib/constants";
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -34,6 +36,7 @@ export async function sendReportUnlockEmail({
     return { success: true, mocked: true };
   }
 
+  const isProduction = process.env.NODE_ENV === "production";
   const rawFrom = process.env.RESEND_FROM_EMAIL?.trim();
   const isPlaceholderDomain =
     !rawFrom ||
@@ -41,7 +44,17 @@ export async function sendReportUnlockEmail({
     rawFrom.includes("example.com") ||
     !rawFrom.includes("@");
 
-  // Fallback to Resend verified sandbox address if domain is unconfigured/placeholder to avoid 403 Forbidden errors
+  if (isProduction && isPlaceholderDomain) {
+    console.error(
+      "[Resend Configuration Error] RESEND_FROM_EMAIL is unconfigured or using a placeholder domain in production. Email dispatch aborted to prevent Resend 403 Forbidden errors."
+    );
+    return {
+      success: false,
+      error: "RESEND_FROM_EMAIL must be configured with a verified custom domain in production",
+    };
+  }
+
+  // In non-production environments, fallback to Resend verified sandbox address
   const fromEmail = isPlaceholderDomain ? "onboarding@resend.dev" : rawFrom;
 
   // Prevent email header injection by removing newlines from subject
@@ -85,7 +98,7 @@ export async function sendReportUnlockEmail({
         <div class="footer">
           <p>Attachment Style & Relationship Shadow Assessment &copy; ${new Date().getFullYear()}. All rights reserved.</p>
           <p>Disclaimer: This assessment is for educational and self-reflection purposes only and does not constitute psychiatric or medical diagnosis.</p>
-          <p>Questions or need support? Reply directly to this email or contact support@yourdomain.com for 14-day hassle-free refunds.</p>
+          <p>Questions or need support? Reply directly to this email or contact ${APP_CONFIG.supportEmail} for 14-day hassle-free refunds.</p>
         </div>
       </div>
     </body>

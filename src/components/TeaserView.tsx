@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ScoreBreakdown } from "@/types/assessment";
 import { calculateAssessmentScores } from "@/lib/scoring";
+import { APP_CONFIG } from "@/lib/constants";
 import {
   Lock,
   Sparkles,
@@ -22,6 +23,8 @@ export function TeaserView() {
   const searchParams = useSearchParams();
   const [scoreData, setScoreData] = useState<ScoreBreakdown | null>(null);
   const [email, setEmail] = useState("");
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [relationshipStatus, setRelationshipStatus] = useState<string>("single");
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showCanceledNotice, setShowCanceledNotice] = useState(false);
@@ -49,6 +52,10 @@ export function TeaserView() {
   }, [searchParams]);
 
   useEffect(() => {
+    let initialScoreData: ScoreBreakdown | null = null;
+    let foundAnswers: Record<number, number> | null = null;
+    let foundStatus: string | null = null;
+
     try {
       const raw =
         typeof window !== "undefined"
@@ -65,17 +72,47 @@ export function TeaserView() {
           typeof parsed.anxiousPercent === "number" &&
           typeof parsed.avoidantPercent === "number"
         ) {
+          initialScoreData = parsed;
           setScoreData(parsed);
-          return;
+          if (parsed.answers) {
+            foundAnswers = parsed.answers;
+          }
+          if (parsed.relationshipStatus) {
+            foundStatus = parsed.relationshipStatus;
+          }
         }
       }
     } catch (e) {
       console.error("Failed to parse stored scores:", e);
     }
 
-    // Fallback demo score if user lands directly on teaser
-    const fallback = calculateAssessmentScores({}, "single");
-    setScoreData(fallback);
+    try {
+      if (typeof window !== "undefined") {
+        const rawAnswers =
+          sessionStorage.getItem("assessment_answers") ||
+          localStorage.getItem("latest_assessment_answers");
+        if (rawAnswers) {
+          foundAnswers = JSON.parse(rawAnswers);
+        }
+        const rawStatus =
+          sessionStorage.getItem("assessment_relationship_status") ||
+          localStorage.getItem("latest_relationship_status");
+        if (rawStatus) {
+          foundStatus = rawStatus;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse stored answers:", e);
+    }
+
+    if (foundAnswers) setAnswers(foundAnswers);
+    if (foundStatus) setRelationshipStatus(foundStatus);
+
+    if (!initialScoreData) {
+      // Fallback demo score if user lands directly on teaser
+      const fallback = calculateAssessmentScores({}, "single");
+      setScoreData(fallback);
+    }
   }, []);
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -91,6 +128,11 @@ export function TeaserView() {
     setIsLoadingCheckout(true);
 
     try {
+      const finalAnswers =
+        Object.keys(answers).length > 0
+          ? answers
+          : scoreData.answers || {};
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,6 +143,8 @@ export function TeaserView() {
           anxiousPercent: scoreData.anxiousPercent,
           avoidantPercent: scoreData.avoidantPercent,
           archetype: scoreData.archetype,
+          relationshipStatus: relationshipStatus || scoreData.relationshipStatus || "single",
+          answers: finalAnswers,
         }),
       });
 
@@ -232,7 +276,9 @@ export function TeaserView() {
                 <Flame className="w-4 h-4" />
               </span>
               <h3 className="font-bold text-stone-900 text-base">
-                Your Toxic Attraction Magnet: {scoreData.partnerAttractionWarning?.drawnToType || "The Avoidant Ghost"}
+                {scoreData.archetype === "Secure"
+                  ? `Your Natural Attraction Matrix: ${scoreData.partnerAttractionWarning?.drawnToType || "Emotionally Available Partners"}`
+                  : `Your Toxic Attraction Magnet: ${scoreData.partnerAttractionWarning?.drawnToType || "The Avoidant Ghost"}`}
               </h3>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-rose-50 text-rose-800 rounded-full border border-rose-200">
@@ -240,14 +286,25 @@ export function TeaserView() {
             </span>
           </div>
 
-          <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
-            <p>
-              Your subconscious mind confuses the emotional unavailability and unpredictability of this partner type with authentic chemistry. Whenever they pull back, your somatic nervous system triggers protest behaviors...
-            </p>
-            <p>
-              The 3 unconscious reasons you attract this specific partner loop and how to permanently short-circuit the chase.
-            </p>
-          </div>
+          {scoreData.archetype === "Secure" ? (
+            <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+              <p>
+                You naturally gravitate toward mutual vulnerability, emotional presence, and stability. However, even secure nervous systems experience blind spots when encountering avoidant or anxious dysregulation...
+              </p>
+              <p>
+                Discover how your secure foundation can withstand complex attachment dynamics and elevate your relationship fulfillment.
+              </p>
+            </div>
+          ) : (
+            <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+              <p>
+                Your subconscious mind confuses the emotional unavailability and unpredictability of this partner type with authentic chemistry. Whenever they pull back, your somatic nervous system triggers protest behaviors...
+              </p>
+              <p>
+                The 3 unconscious reasons you attract this specific partner loop and how to permanently short-circuit the chase.
+              </p>
+            </div>
+          )}
 
           <div className="absolute inset-0 flex items-center justify-center bg-stone-900/10 backdrop-blur-[2px]">
             <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
@@ -416,7 +473,7 @@ export function TeaserView() {
             <span>14-Day 100% Hassle-Free Money-Back Guarantee</span>
           </div>
           <p className="text-[11px] text-stone-400 leading-relaxed">
-            If this assessment does not provide profound clarity into your relationship patterns, email support@yourdomain.com within 14 days for an immediate 100% refund. No questions asked.
+            If this assessment does not provide profound clarity into your relationship patterns, email {APP_CONFIG.supportEmail} within 14 days for an immediate 100% refund. No questions asked.
           </p>
           <div className="flex items-center justify-center gap-4 text-[11px] text-stone-500 pt-1">
             <span>🔒 256-Bit SSL Encrypted</span>

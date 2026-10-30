@@ -1,6 +1,7 @@
 import React from "react";
 import { ShieldCheck, Mail } from "lucide-react";
 import type { Metadata } from "next";
+import { APP_CONFIG } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy - Attachment & Shadow Lab",
@@ -34,7 +35,9 @@ export default function RefundPolicyPage() {
           </p>
           <div className="bg-stone-100 p-4 rounded-xl border border-stone-200 inline-flex items-center gap-2 text-stone-900 font-mono text-sm">
             <Mail className="w-4 h-4 text-stone-500" />
-            <span>support@yourdomain.com</span>
+            <a href={`mailto:${APP_CONFIG.supportEmail}`} className="hover:underline">
+              {APP_CONFIG.supportEmail}
+            </a>
           </div>
           <p className="mt-3 text-xs text-stone-500">
             Please include the email address used at checkout or your Report ID. Refunds are issued directly to your original payment method via Stripe within 2 to 5 business days.

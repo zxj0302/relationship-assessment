@@ -15,6 +15,7 @@ import {
   Clock,
   Compass,
   BookOpen,
+  Users,
 } from "lucide-react";
 
 interface ReportViewProps {
@@ -30,6 +31,17 @@ export function PremiumReportView({
 }: ReportViewProps) {
   const [copied, setCopied] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [formattedDate, setFormattedDate] = useState<string>("");
+
+  useEffect(() => {
+    setFormattedDate(
+      new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    );
+  }, []);
 
   useEffect(() => {
     if (isUnlocked) {
@@ -83,6 +95,7 @@ export function PremiumReportView({
   };
 
   const handleCopyInvite = async () => {
+    if (typeof window === "undefined") return;
     const inviteUrl = `${window.location.origin}/quiz?ref=${resultId.slice(0, 8)}`;
     try {
       if (navigator?.clipboard?.writeText) {
@@ -90,6 +103,24 @@ export function PremiumReportView({
         setInviteCopied(true);
         setTimeout(() => setInviteCopied(false), 2000);
         return;
+      }
+    } catch (err) {
+      console.warn("Clipboard copy failed, fallback:", err);
+    }
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = inviteUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      if (successful) {
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 2000);
       }
     } catch {
       // Safe ignore
@@ -142,7 +173,7 @@ export function PremiumReportView({
               Confidential Psychological Profile
             </span>
             <span className="text-xs text-stone-400 font-mono">
-              Generated: {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              Generated: {formattedDate || "Recent"}
             </span>
           </div>
 
@@ -346,12 +377,82 @@ export function PremiumReportView({
           </div>
         </div>
 
-        {/* Section 7: 30-Day Rewiring Action Plan */}
+        {/* Section 7: Partner Compatibility Matrix */}
+        {deep.compatibilityAnalysis && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-rose-700" />
+              <h2 className="font-serif text-2xl font-bold text-stone-900">
+                7. Partner Compatibility Matrix
+              </h2>
+            </div>
+
+            <p className="text-xs sm:text-sm text-stone-500 mb-6 leading-relaxed">
+              In-depth psychological interaction analysis and relationship dynamics across the 4 core attachment styles.
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* With Secure */}
+              <div className="p-5 rounded-2xl border border-emerald-200/80 bg-emerald-50/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    With Secure Partner
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-700">Anchor Dynamics</span>
+                </div>
+                <p className="text-xs sm:text-sm text-stone-700 mt-2 leading-relaxed">
+                  {deep.compatibilityAnalysis.withSecure}
+                </p>
+              </div>
+
+              {/* With Anxious */}
+              <div className="p-5 rounded-2xl border border-rose-200/80 bg-rose-50/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-rose-800 uppercase tracking-wider bg-rose-100/80 px-2.5 py-0.5 rounded-full border border-rose-200">
+                    With Anxious-Preoccupied Partner
+                  </span>
+                  <span className="text-xs font-semibold text-rose-700">Intimacy &amp; Fusion</span>
+                </div>
+                <p className="text-xs sm:text-sm text-stone-700 mt-2 leading-relaxed">
+                  {deep.compatibilityAnalysis.withAnxious}
+                </p>
+              </div>
+
+              {/* With Avoidant */}
+              <div className="p-5 rounded-2xl border border-blue-200/80 bg-blue-50/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-blue-800 uppercase tracking-wider bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    With Dismissive-Avoidant Partner
+                  </span>
+                  <span className="text-xs font-semibold text-blue-700">Autonomy &amp; Space</span>
+                </div>
+                <p className="text-xs sm:text-sm text-stone-700 mt-2 leading-relaxed">
+                  {deep.compatibilityAnalysis.withAvoidant}
+                </p>
+              </div>
+
+              {/* With Fearful */}
+              <div className="p-5 rounded-2xl border border-purple-200/80 bg-purple-50/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-purple-800 uppercase tracking-wider bg-purple-100/80 px-2.5 py-0.5 rounded-full border border-purple-200">
+                    With Fearful-Avoidant Partner
+                  </span>
+                  <span className="text-xs font-semibold text-purple-700">Polarity &amp; Push-Pull</span>
+                </div>
+                <p className="text-xs sm:text-sm text-stone-700 mt-2 leading-relaxed">
+                  {deep.compatibilityAnalysis.withFearful}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Section 8: 30-Day Rewiring Action Plan */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-rose-700" />
             <h2 className="font-serif text-2xl font-bold text-stone-900">
-              7. Customized 30-Day Subconscious Rewiring Action Plan
+              8. Customized 30-Day Subconscious Rewiring Action Plan
             </h2>
           </div>
 
