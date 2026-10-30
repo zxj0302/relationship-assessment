@@ -3,6 +3,7 @@ import { verifyResultToken } from "@/lib/jwt";
 export const runtime = "edge";
 
 import { stripe } from "@/lib/stripe";
+import { calculateAssessmentScores } from "@/lib/scoring";
 import { ARCHETYPE_PROFILES } from "@/data/archetypes";
 import { AttachmentArchetype, ScoreBreakdown } from "@/types/assessment";
 import { PremiumReportView } from "@/components/PremiumReportView";
@@ -141,7 +142,19 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
 
   const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
 
+  // Generate complete multidimensional score data
+  const baseScores = calculateAssessmentScores(
+    targetArchetype === "Anxious-Preoccupied"
+      ? { 1: 5, 2: 5, 3: 5, 4: 4, 14: 5, 19: 5, 21: 5 }
+      : targetArchetype === "Dismissive-Avoidant"
+      ? { 7: 5, 8: 5, 9: 5, 10: 5, 13: 5, 22: 5 }
+      : targetArchetype === "Fearful-Avoidant"
+      ? { 1: 5, 7: 5, 13: 5, 14: 5, 18: 5, 20: 5 }
+      : { 5: 5, 11: 5, 16: 5, 23: 5 }
+  );
+
   const scoreData: ScoreBreakdown = {
+    ...baseScores,
     anxiousRaw,
     anxiousPercent,
     avoidantRaw,

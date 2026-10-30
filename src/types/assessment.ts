@@ -1,4 +1,12 @@
-export type AttachmentDimension = "anxious" | "avoidant";
+export type AttachmentDimension = "anxious" | "avoidant" | "conflict" | "childhood";
+
+export type QuestionCategory = 
+  | "Intimacy" 
+  | "Independence" 
+  | "Reassurance" 
+  | "Vulnerability" 
+  | "Conflict" 
+  | "ChildhoodWound";
 
 export interface Question {
   id: number;
@@ -6,7 +14,7 @@ export interface Question {
   reversed: boolean;
   prompt: string;
   subtext?: string;
-  category: "Intimacy" | "Independence" | "Reassurance" | "Vulnerability" | "Conflict";
+  category: QuestionCategory;
 }
 
 export type AttachmentArchetype = 
@@ -15,15 +23,50 @@ export type AttachmentArchetype =
   | "Dismissive-Avoidant"
   | "Fearful-Avoidant";
 
+export type RelationshipStatus = 
+  | "single" 
+  | "dating" 
+  | "in_relationship" 
+  | "complicated" 
+  | "healing";
+
+export interface ConflictShadowProfile {
+  shadowType: "Fight" | "Flight" | "Freeze" | "Fawn";
+  title: string;
+  trigger: string;
+  defaultReaction: string;
+  nervousSystemReframe: string;
+}
+
+export interface ChildhoodWoundProfile {
+  title: string;
+  subconsciousContract: string;
+  coreFear: string;
+  healingMantra: string;
+}
+
+export interface PartnerAttractionWarning {
+  drawnToType: string;
+  whyAttracted: string;
+  theBreakingPoint: string;
+  antidote: string;
+}
+
 export interface ScoreBreakdown {
   anxiousRaw: number;
   anxiousPercent: number; // 0 - 100
   avoidantRaw: number;
   avoidantPercent: number; // 0 - 100
+  conflictRaw: number;
+  childhoodRaw: number;
+  relationshipStatus?: RelationshipStatus;
   archetype: AttachmentArchetype;
   archetypeTitle: string;
   shadowSubtype: string;
   shortSummary: string;
+  conflictShadow: ConflictShadowProfile;
+  childhoodWound: ChildhoodWoundProfile;
+  partnerAttractionWarning: PartnerAttractionWarning;
   deepDive: {
     coreFear: string;
     subconsciousDrive: string;
@@ -57,6 +100,7 @@ export interface StoredResultTokenPayload {
   anxiousPercent: number;
   avoidantPercent: number;
   archetype: AttachmentArchetype;
+  relationshipStatus?: RelationshipStatus;
   isUnlocked: boolean;
   createdAt: number;
 }
