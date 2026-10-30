@@ -10,7 +10,7 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfa
 export const metadata: Metadata = {
   title: "Attachment Style & Relationship Shadow Assessment",
   description:
-    "A 3-minute evidence-based clinical assessment to uncover your attachment style, emotional triggers, subconscious fears, and partner compatibility.",
+    "A 3-minute research-informed self-assessment to uncover your attachment style, emotional triggers, subconscious patterns, and partner compatibility.",
 };
 
 export default function RootLayout({

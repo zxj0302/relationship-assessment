@@ -6,7 +6,6 @@ import {
   Award,
   Flame,
   Clock,
-  Compass,
   FileCheck2,
 } from "lucide-react";
 
@@ -18,7 +17,7 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 max-w-5xl mx-auto text-center">
-        {/* Social Proof Pill */}
+        {/* Methodology Pill */}
         <div className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200/80 rounded-full px-4 py-1.5 mb-8 shadow-sm">
           <div className="flex -space-x-1.5 overflow-hidden">
             <span className="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-rose-300" />
@@ -26,7 +25,7 @@ export default function HomePage() {
             <span className="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-emerald-300" />
           </div>
           <span className="text-xs font-medium text-stone-700">
-            Over <strong className="font-semibold text-stone-900">120,000+</strong> assessments taken
+            <strong className="font-semibold text-stone-900">24-Item Assessment</strong> • Grounded in Attachment Research
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </div>
@@ -41,7 +40,7 @@ export default function HomePage() {
 
         {/* Subtitle */}
         <p className="text-lg sm:text-xl text-stone-600 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
-          A 3-minute evidence-based clinical assessment to uncover why you love, pull away, or react the way you do — and how to break exhausting relationship cycles.
+          A 3-minute research-informed self-assessment to uncover why you love, pull away, or react the way you do — and how to break exhausting relationship cycles.
         </p>
 
         {/* Big Sticky CTA */}
@@ -67,7 +66,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5">
             <Award className="w-4 h-4 text-amber-600" />
-            <span>ECR-R Clinical Psychometrics</span>
+            <span>ECR-R–Inspired Psychometrics</span>
           </div>
         </div>
       </section>
@@ -92,6 +91,8 @@ export default function HomePage() {
                 desc: "High intimacy drive, hyper-attuned to shifts in connection, prone to sudden panic when space is taken.",
                 tag: "High Anxiety • Low Avoidance",
                 color: "bg-rose-50 border-rose-200 text-rose-900",
+                anxietyBar: "w-[85%] bg-rose-500",
+                avoidanceBar: "w-[22%] bg-stone-400",
               },
               {
                 title: "Dismissive-Avoidant",
@@ -99,6 +100,8 @@ export default function HomePage() {
                 desc: "Values fierce independence, retreats from intense emotional vulnerability, shuts down during conflict.",
                 tag: "Low Anxiety • High Avoidance",
                 color: "bg-sky-50 border-sky-200 text-sky-900",
+                anxietyBar: "w-[25%] bg-stone-400",
+                avoidanceBar: "w-[85%] bg-sky-500",
               },
               {
                 title: "Fearful-Avoidant",
@@ -106,6 +109,8 @@ export default function HomePage() {
                 desc: "Craves profound intimacy but instinctively fears engulfment or abandonment. Oscillates between pull & push.",
                 tag: "High Anxiety • High Avoidance",
                 color: "bg-purple-50 border-purple-200 text-purple-900",
+                anxietyBar: "w-[82%] bg-purple-500",
+                avoidanceBar: "w-[80%] bg-purple-500",
               },
               {
                 title: "Secure",
@@ -113,6 +118,8 @@ export default function HomePage() {
                 desc: "Comfortable with vulnerability and space, communicates boundaries calmly, regulates distress collaboratively.",
                 tag: "Low Anxiety • Low Avoidance",
                 color: "bg-emerald-50 border-emerald-200 text-emerald-900",
+                anxietyBar: "w-[20%] bg-emerald-500",
+                avoidanceBar: "w-[18%] bg-emerald-500",
               },
             ].map((arch, i) => (
               <div
@@ -129,9 +136,19 @@ export default function HomePage() {
                   <h4 className="text-xs font-medium text-stone-500 mb-3 italic">{arch.subtitle}</h4>
                   <p className="text-xs text-stone-600 leading-relaxed">{arch.desc}</p>
                 </div>
-                <div className="pt-4 mt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
-                  <span>Dimension Profile</span>
-                  <Compass className="w-3.5 h-3.5 text-stone-400" />
+                <div className="pt-4 mt-5 border-t border-stone-100 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-stone-500">
+                    <span>Anxiety</span>
+                    <div className="w-28 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${arch.anxietyBar}`} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-stone-500">
+                    <span>Avoidance</span>
+                    <div className="w-28 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${arch.avoidanceBar}`} />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -191,13 +208,58 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Frequently Asked Questions */}
+        <div className="mt-20 pt-16 border-t border-stone-200/80">
+          <div className="text-center max-w-xl mx-auto mb-10">
+            <span className="text-xs uppercase tracking-widest font-semibold text-stone-500">
+              Methodology &amp; Privacy
+            </span>
+            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 mt-1.5">
+              Frequently Asked Questions
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[
+              {
+                q: "What is the ECR-R psychometric framework?",
+                a: "The Experiences in Close Relationships–Revised (ECR-R) is a widely recognized research model in adult attachment psychology, measuring two primary dimensions: Attachment-Related Anxiety and Attachment-Related Avoidance.",
+              },
+              {
+                q: "Can I take this assessment if I am currently single?",
+                a: "Yes. Your attachment blueprint operates across past partnerships, early dating stages, and long-term commitments. Step 1 calibrates the analysis to your current relationship status.",
+              },
+              {
+                q: "Are my quiz answers private and anonymous?",
+                a: "Completely. You do not need to create an account or enter personal details to take the 24-question assessment and view your core attachment coordinates.",
+              },
+              {
+                q: "How long does the assessment take?",
+                a: "Most participants complete all 24 questions in under 3 minutes. For the most accurate reading, select your first instinctive gut reaction rather than over-analyzing.",
+              },
+            ].map((faq, idx) => (
+              <div
+                key={idx}
+                className="bg-white/80 p-6 rounded-2xl border border-stone-200/80 shadow-sm"
+              >
+                <h4 className="font-serif text-base font-bold text-stone-900 mb-2">
+                  {faq.q}
+                </h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  {faq.a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Bottom Banner CTA */}
         <div className="mt-16 bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-8 sm:p-12 text-center shadow-xl">
           <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-4">
             Ready to uncover your relationship blindspots?
           </h3>
           <p className="text-stone-300 text-sm max-w-xl mx-auto mb-8">
-            Join over 120,000+ individuals who have taken this test to transform how they navigate love, intimacy, and conflict.
+            Take our 24-question self-discovery assessment to map your attachment coordinates and transform how you navigate love, intimacy, and conflict.
           </p>
           <Link
             href="/quiz"

@@ -32,7 +32,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-semibold text-base text-stone-900 mb-2">3. Purchases & Digital Goods</h2>
           <p>
-            Access to the comprehensive 12-page report is provided upon payment of $14.99 USD. Because our product is digital, immediate access is granted via your web browser and email confirmation. All transactions are securely processed by Stripe.
+            Access to the comprehensive 8-module report is provided upon a one-time payment of $14.99 USD (plus applicable taxes). Because our product is digital, immediate access is granted via your web browser and email confirmation. All transactions are securely processed by Stripe.
           </p>
         </section>
 

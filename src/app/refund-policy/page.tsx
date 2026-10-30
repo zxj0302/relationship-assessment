@@ -24,7 +24,7 @@ export default function RefundPolicyPage() {
         <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl text-emerald-950">
           <h2 className="font-serif font-bold text-lg mb-2">Our Hassle-Free Commitment</h2>
           <p className="text-xs sm:text-sm leading-relaxed">
-            We are confident that our 12-page comprehensive assessment provides immense therapeutic value and actionable clarity. However, if for any reason you are not completely satisfied with your report, we offer a <strong>100% full refund within 14 days of purchase</strong> — no questions asked.
+            We are confident that our 8-module comprehensive assessment report provides meaningful self-reflection value and actionable clarity. However, if for any reason you are not completely satisfied with your report, we offer a <strong>100% full refund within 14 days of purchase</strong> — no questions asked.
           </p>
         </div>
 

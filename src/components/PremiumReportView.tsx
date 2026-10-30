@@ -236,7 +236,7 @@ export function PremiumReportView({
           </div>
 
           <p className="text-xs sm:text-sm text-stone-500 mb-6 leading-relaxed">
-            Plotted against the ECR-R (Experiences in Close Relationships-Revised) psychometric matrix across 120,000+ benchmarked relationships.
+            Plotted across the two-dimensional ECR-R (Experiences in Close Relationships–Revised) attachment framework: Attachment-Related Anxiety and Attachment-Related Avoidance.
           </p>
 
           <AttachmentSpectrumVisual

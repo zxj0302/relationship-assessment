@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
             currency: "usd",
             unit_amount: 1499, // $14.99 in cents
             product_data: {
-              name: "Full 12-Page Attachment & Relationship Shadow Assessment Report",
+              name: "Full 8-Module Attachment & Relationship Shadow Assessment Report",
               description: `Deep subconscious blueprint, 30-Day Rewiring Plan, and Partner Compatibility Analysis for ${authoritativeArchetype}.`,
               tax_code: "txcd_10000000",
               images: [

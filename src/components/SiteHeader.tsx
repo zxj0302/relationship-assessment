@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { HeartHandshake, ShieldCheck } from "lucide-react";
 
 export function SiteHeader() {
+  const pathname = usePathname();
+  const hideTakeTestCta =
+    pathname?.startsWith("/quiz") ||
+    pathname?.startsWith("/results") ||
+    pathname?.startsWith("/report");
+
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-stone-50/90 border-b border-stone-200">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between sm:px-6">
@@ -20,12 +29,14 @@ export function SiteHeader() {
             <span>Confidential & Anonymous</span>
           </div>
 
-          <Link
-            href="/quiz"
-            className="text-xs font-semibold bg-stone-900 hover:bg-stone-800 text-white px-4 py-2 rounded-full transition shadow-sm active:scale-95"
-          >
-            Take Test
-          </Link>
+          {!hideTakeTestCta && (
+            <Link
+              href="/quiz"
+              className="text-xs font-semibold bg-stone-900 hover:bg-stone-800 text-white px-4 py-2 rounded-full transition shadow-sm active:scale-95"
+            >
+              Take Test
+            </Link>
+          )}
         </div>
       </div>
     </header>

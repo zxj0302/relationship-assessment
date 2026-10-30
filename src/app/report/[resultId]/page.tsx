@@ -203,7 +203,7 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
         </h1>
         <p className="text-stone-600 text-sm leading-relaxed mb-6">
           Your payment was submitted successfully and is currently being processed by your bank or payment provider.
-          Once the transaction settles, your comprehensive 12-page report will unlock automatically.
+          Once the transaction settles, your comprehensive 8-module report will unlock automatically.
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 text-left mb-8 space-y-2">
@@ -241,7 +241,7 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
           This Report is Currently Locked
         </h1>
         <p className="text-stone-600 text-sm leading-relaxed mb-8">
-          The comprehensive 12-page psychological analysis for this assessment ID has not yet been unlocked or your verification session has expired.
+          The comprehensive 8-module psychological analysis for this assessment ID has not yet been unlocked or your verification session has expired.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

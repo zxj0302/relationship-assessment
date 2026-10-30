@@ -82,7 +82,7 @@ export async function sendReportUnlockEmail({
       <div class="container">
         <span class="badge">Official Confirmation</span>
         <h1>Your Psychological Blueprint Has Been Unlocked</h1>
-        <p>Thank you for your purchase. Your comprehensive 12-page <strong>Attachment Style & Shadow Analysis</strong> report is now permanently accessible in your private portal.</p>
+        <p>Thank you for your purchase. Your comprehensive 8-module <strong>Attachment Style & Shadow Analysis</strong> report is now permanently accessible in your private portal.</p>
         
         <div class="box">
           <p style="margin: 0; font-weight: 600; color: #9a3412;">Primary Archetype: ${safeHtmlArchetype}</p>

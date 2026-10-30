@@ -274,7 +274,7 @@ export const ARCHETYPE_PROFILES: Record<
         withSecure:
           "High harmony, smooth conflict resolution, and deep mutual emotional growth. The benchmark of conscious relationship.",
         withAnxious:
-          "Naturally therapeutic for the anxious partner. As long as firm boundaries are held, the anxious partner softens into security.",
+          "Naturally grounding for the anxious partner. As long as firm boundaries are held, the anxious partner softens into security.",
         withAvoidant:
           "Respects their need for space without taking detachment personally. Can bridge the gap if the avoidant partner desires growth.",
         withFearful:

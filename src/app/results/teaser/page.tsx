@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Your Attachment Style Results - Teaser & Shadow Breakdown",
-  description: "View your preliminary attachment archetype and unlock your 12-page comprehensive diagnostic report.",
+  description: "View your preliminary attachment archetype and unlock your 8-module comprehensive relationship shadow report.",
 };
 
 export default function TeaserPage() {

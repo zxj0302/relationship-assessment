@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ScoreBreakdown, AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import { calculateAssessmentScores } from "@/lib/scoring";
+import { AttachmentSpectrumVisual } from "@/components/AttachmentSpectrumVisual";
 import { APP_CONFIG } from "@/lib/constants";
 import {
   Lock,
@@ -13,7 +15,6 @@ import {
   ArrowRight,
   AlertCircle,
   Loader2,
-  Clock,
   Flame,
   KeyRound,
   FileText,
@@ -35,22 +36,6 @@ export function TeaserView() {
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showCanceledNotice, setShowCanceledNotice] = useState(false);
-
-  // 15-minute countdown timer state for CRO loss aversion
-  const [timeLeft, setTimeLeft] = useState(899); // 14 mins 59 secs
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTimer = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  };
 
   useEffect(() => {
     if (searchParams.get("canceled") === "true") {
@@ -226,21 +211,21 @@ export function TeaserView() {
         </div>
       )}
 
-      {/* CRO Urgency & Social Proof Bar */}
+      {/* Assessment Status & Instant Delivery Bar */}
       <div className="bg-gradient-to-r from-stone-900 to-stone-800 text-stone-100 rounded-2xl p-3.5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs shadow-md">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-stone-200">
-            <strong>120,000+</strong> assessments taken • <strong>28 people</strong> unlocked today
+            <strong>Assessment Complete</strong> • 24 Behavioral &amp; Somatic Markers Scored
           </span>
         </div>
 
         <div className="flex items-center gap-1.5 text-amber-300 font-medium">
-          <Clock className="w-3.5 h-3.5" />
-          <span>Discount reserved for: <strong className="font-mono text-white text-sm">{formatTimer(timeLeft)}</strong></span>
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Introductory Launch Pricing • <strong className="text-white">Save 62%</strong></span>
         </div>
       </div>
 
@@ -265,7 +250,7 @@ export function TeaserView() {
         </p>
 
         {/* Dimension Radar Cards */}
-        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto pt-6 border-t border-stone-100">
+        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto pt-6 border-t border-stone-100 mb-6">
           <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200/80">
             <p className="text-xs text-stone-500 uppercase tracking-wider font-semibold">Anxiety Index</p>
             <p className="text-2xl sm:text-3xl font-bold text-rose-800 mt-1">{scoreData.anxiousPercent}%</p>
@@ -282,16 +267,25 @@ export function TeaserView() {
             </p>
           </div>
         </div>
+
+        {/* Interactive 2D Coordinate Spectrum Preview */}
+        <div className="text-left max-w-lg mx-auto">
+          <AttachmentSpectrumVisual
+            anxiousPercent={scoreData.anxiousPercent}
+            avoidantPercent={scoreData.avoidantPercent}
+            archetype={scoreData.archetype}
+          />
+        </div>
       </div>
 
       {/* Blurred Paywall Cards: The Hidden Shadow Blueprint */}
       <div className="space-y-4 mb-8">
         <div className="text-center mb-6">
           <h2 className="font-serif text-2xl font-bold text-stone-900">
-            What&apos;s Inside Your Unlocked 12-Page Analysis
+            What&apos;s Inside Your Unlocked 8-Module Analysis
           </h2>
           <p className="text-xs sm:text-sm text-stone-500 mt-1">
-            4 critical sections currently locked behind your private report portal
+            7 additional in-depth modules locked in your private report portal — preview 3 core sections below
           </p>
         </div>
 
@@ -409,14 +403,14 @@ export function TeaserView() {
         <div className="text-center mb-8">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-600/30 text-rose-300 border border-rose-500/30 mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            Limited Promotional Offer • Save 62%
+            Introductory Launch Offer • Save 62%
           </span>
 
           <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold mb-3">
-            Unlock Your Complete 12-Page Deep Analysis
+            Unlock Your Complete 8-Module Deep Analysis
           </h2>
           <p className="text-stone-300 text-xs sm:text-sm max-w-lg mx-auto">
-            Get instant, permanent access to your full psychological roadmap, childhood wound diagnosis, and printable PDF guide.
+            Get instant, permanent access to your full psychological roadmap, childhood wound blueprint, and printable PDF guide.
           </p>
 
           <div className="flex items-center justify-center gap-3 mt-6">
@@ -432,7 +426,7 @@ export function TeaserView() {
         <div className="grid sm:grid-cols-2 gap-3 max-w-xl mx-auto mb-8 text-xs sm:text-sm text-stone-200">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Full 12-Page Attachment &amp; Shadow Breakdown</span>
+            <span>Full 8-Module Attachment &amp; Shadow Breakdown</span>
           </div>
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -490,6 +484,22 @@ export function TeaserView() {
                 </>
               )}
             </button>
+
+            <p className="text-[11px] text-stone-400 text-center leading-relaxed pt-1">
+              One-time payment of $14.99 USD (plus applicable local taxes). No recurring subscription. By continuing, you agree to our{" "}
+              <Link href="/terms" className="underline hover:text-stone-200">
+                Terms
+              </Link>
+              ,{" "}
+              <Link href="/privacy" className="underline hover:text-stone-200">
+                Privacy Policy
+              </Link>
+              , and{" "}
+              <Link href="/refund-policy" className="underline hover:text-stone-200">
+                14-Day Refund Policy
+              </Link>
+              .
+            </p>
           </div>
         </form>
 

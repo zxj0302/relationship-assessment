@@ -119,15 +119,13 @@ export function QuizFlow() {
       clearTimeout(timerRef.current);
     }
 
-    if (milestoneTimerRef.current) {
-      clearTimeout(milestoneTimerRef.current);
-    }
-
     // Micro-milestone triggers
     if (currentIndex === 7) {
+      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
       setMilestoneNotice("Baseline Calibration Complete: Your intimacy & attachment radar is mapped.");
       milestoneTimerRef.current = setTimeout(() => setMilestoneNotice(null), 2500);
     } else if (currentIndex === 15) {
+      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
       setMilestoneNotice("Deep Pattern Detected: Calibrating your conflict response and defensive armor.");
       milestoneTimerRef.current = setTimeout(() => setMilestoneNotice(null), 2500);
     }
@@ -151,6 +149,7 @@ export function QuizFlow() {
     if (milestoneTimerRef.current) {
       clearTimeout(milestoneTimerRef.current);
     }
+    setMilestoneNotice(null);
     isTransitioningRef.current = false;
     setIsTransitioning(false);
 
@@ -168,16 +167,38 @@ export function QuizFlow() {
     }
   };
 
+  // Keyboard shortcuts (1-5 to select rating, ArrowLeft/Backspace to go back)
+  useEffect(() => {
+    if (!relationshipStatus || isSubmitting) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+
+      if (e.key >= "1" && e.key <= "5") {
+        e.preventDefault();
+        handleSelectOption(Number(e.key));
+      } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
+        e.preventDefault();
+        handlePrev();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
   const finishAssessment = async (finalAnswers: Record<number, number>) => {
     if (!isMountedRef.current) return;
     setIsSubmitting(true);
 
     const calculationPhases = [
       "Calibrating 24 behavioral and somatic attachment markers...",
-      "Cross-referencing ECR-R benchmark database (120,000+ profiles)...",
+      "Mapping coordinates onto the ECR-R two-dimensional attachment matrix...",
       "Analyzing nervous system conflict responses (Fight / Flight / Freeze / Fawn)...",
       "Decoding subconscious childhood conditioning & partner attraction loops...",
-      "Generating your personalized 12-page recovery & shadow report...",
+      "Generating your personalized 8-module recovery & shadow report...",
     ];
 
     for (let i = 0; i < calculationPhases.length; i++) {
@@ -272,10 +293,10 @@ export function QuizFlow() {
   if (isSubmitting) {
     const steps = [
       "Calibrating 24 behavioral and somatic attachment markers...",
-      "Cross-referencing ECR-R benchmark database (120,000+ profiles)...",
+      "Mapping coordinates onto the ECR-R two-dimensional attachment matrix...",
       "Analyzing nervous system conflict responses (Fight / Flight / Freeze / Fawn)...",
       "Decoding subconscious childhood conditioning & partner attraction loops...",
-      "Compiling your personalized 12-page recovery & shadow report...",
+      "Compiling your personalized 8-module recovery & shadow report...",
     ];
 
     return (
@@ -305,7 +326,7 @@ export function QuizFlow() {
 
         <div className="mt-8 flex items-center gap-3 text-xs text-stone-400">
           <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-            <CheckCircle className="w-3.5 h-3.5" /> ECR-R Standard
+            <CheckCircle className="w-3.5 h-3.5" /> ECR-R Framework
           </span>
           <span>•</span>
           <span>Somatic Markers</span>
@@ -362,22 +383,22 @@ export function QuizFlow() {
             Dimension: {currentQuestion.category}
           </span>
           <span className="text-[11px] text-stone-400">
-            Select the rating that feels most intuitive
+            Select intuitively <span className="hidden sm:inline">(or press keys 1–5)</span>
           </span>
         </div>
       </div>
 
-      {/* Milestone Floating Alert */}
+      {/* Milestone Floating Toast (non-layout-shifting) */}
       <AnimatePresence>
         {milestoneNotice && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs px-3.5 py-2 rounded-xl mb-4 flex items-center gap-2 shadow-sm"
+            exit={{ opacity: 0, y: 12 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md bg-emerald-950/95 text-emerald-50 border border-emerald-700/60 text-xs px-4 py-3 rounded-2xl flex items-center gap-2.5 shadow-xl backdrop-blur-sm pointer-events-none"
           >
-            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-medium">{milestoneNotice}</span>
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-medium leading-snug">{milestoneNotice}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -454,9 +475,9 @@ export function QuizFlow() {
       <div className="flex items-center justify-between text-xs text-stone-400 px-2">
         <div className="flex items-center gap-1.5">
           <Lock className="w-3.5 h-3.5" />
-          <span>Responses are encrypted & confidential</span>
+          <span>Responses are private & confidential</span>
         </div>
-        <span>Based on ECR-R Psychological Standard</span>
+        <span>Inspired by ECR-R Attachment Framework</span>
       </div>
     </div>
   );
