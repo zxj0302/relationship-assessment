@@ -27,11 +27,64 @@ export function QuizFlow() {
 
   // Transition and debounce lock to prevent rapid clicks skipping questions
   const isTransitioningRef = useRef(false);
+  const isMountedRef = useRef(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const milestoneTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
+
+  // Restore cached progress on mount (prevents loss on accidental reload/navigation)
+  useEffect(() => {
+    try {
+      const savedStatus = sessionStorage.getItem("quiz_progress_status") as RelationshipStatus | null;
+      const savedIndexStr = sessionStorage.getItem("quiz_progress_index");
+      const savedAnswersStr = sessionStorage.getItem("quiz_progress_answers");
+
+      if (savedAnswersStr) {
+        const parsed = JSON.parse(savedAnswersStr);
+        if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+          setAnswers(parsed);
+        }
+      }
+      if (savedStatus) {
+        setRelationshipStatus(savedStatus);
+      }
+      if (savedIndexStr) {
+        const parsedIndex = parseInt(savedIndexStr, 10);
+        if (!Number.isNaN(parsedIndex) && parsedIndex >= 0 && parsedIndex < QUESTION_BANK.length) {
+          setCurrentIndex(parsedIndex);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to restore quiz progress from sessionStorage:", err);
+    } finally {
+      setIsRestored(true);
+    }
+  }, []);
+
+  // Sync state to sessionStorage whenever user answers questions or navigates (strictly gated after restoration is committed)
+  useEffect(() => {
+    if (!isRestored || typeof window === "undefined") return;
+    try {
+      if (relationshipStatus) {
+        sessionStorage.setItem("quiz_progress_status", relationshipStatus);
+      } else {
+        sessionStorage.removeItem("quiz_progress_status");
+      }
+      if (Object.keys(answers).length > 0) {
+        sessionStorage.setItem("quiz_progress_answers", JSON.stringify(answers));
+      } else {
+        sessionStorage.removeItem("quiz_progress_answers");
+      }
+      sessionStorage.setItem("quiz_progress_index", String(currentIndex));
+    } catch (storageErr) {
+      console.warn("Failed to cache quiz progress to sessionStorage:", storageErr);
+    }
+  }, [isRestored, answers, currentIndex, relationshipStatus]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
@@ -105,10 +158,18 @@ export function QuizFlow() {
       setCurrentIndex((prev) => prev - 1);
     } else {
       setRelationshipStatus(null);
+      setCurrentIndex(0);
+      try {
+        sessionStorage.removeItem("quiz_progress_status");
+        sessionStorage.setItem("quiz_progress_index", "0");
+      } catch {
+        // Ignore storage errors
+      }
     }
   };
 
   const finishAssessment = async (finalAnswers: Record<number, number>) => {
+    if (!isMountedRef.current) return;
     setIsSubmitting(true);
 
     const calculationPhases = [
@@ -120,9 +181,12 @@ export function QuizFlow() {
     ];
 
     for (let i = 0; i < calculationPhases.length; i++) {
+      if (!isMountedRef.current) return;
       setCalculatingStep(i);
       await new Promise((res) => setTimeout(res, 600));
     }
+
+    if (!isMountedRef.current) return;
 
     // Compute scores
     const breakdown = calculateAssessmentScores(finalAnswers, relationshipStatus || "single");
@@ -136,11 +200,16 @@ export function QuizFlow() {
         localStorage.setItem("latest_assessment_scores", JSON.stringify(breakdown));
         localStorage.setItem("latest_assessment_answers", JSON.stringify(finalAnswers));
         localStorage.setItem("latest_relationship_status", relationshipStatus || "single");
+        // Clear in-flight quiz progress once assessment is finalized
+        sessionStorage.removeItem("quiz_progress_status");
+        sessionStorage.removeItem("quiz_progress_index");
+        sessionStorage.removeItem("quiz_progress_answers");
       } catch (storageErr) {
         console.warn("Local storage write failed:", storageErr);
       }
     }
 
+    if (!isMountedRef.current) return;
     router.push("/results/teaser");
   };
 

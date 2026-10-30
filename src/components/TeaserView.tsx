@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ScoreBreakdown } from "@/types/assessment";
+import { ScoreBreakdown, AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import { calculateAssessmentScores } from "@/lib/scoring";
 import { APP_CONFIG } from "@/lib/constants";
 import {
@@ -18,6 +18,13 @@ import {
   KeyRound,
   FileText,
 } from "lucide-react";
+
+const VALID_ARCHETYPES: AttachmentArchetype[] = [
+  "Secure",
+  "Anxious-Preoccupied",
+  "Dismissive-Avoidant",
+  "Fearful-Avoidant",
+];
 
 export function TeaserView() {
   const searchParams = useSearchParams();
@@ -65,20 +72,36 @@ export function TeaserView() {
 
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          parsed.archetypeTitle &&
-          typeof parsed.anxiousPercent === "number" &&
-          typeof parsed.avoidantPercent === "number"
-        ) {
-          initialScoreData = parsed;
-          setScoreData(parsed);
-          if (parsed.answers) {
+        if (parsed && typeof parsed === "object") {
+          if (parsed.answers && typeof parsed.answers === "object" && !Array.isArray(parsed.answers)) {
             foundAnswers = parsed.answers;
           }
-          if (parsed.relationshipStatus) {
+          if (typeof parsed.relationshipStatus === "string") {
             foundStatus = parsed.relationshipStatus;
+          }
+          if (
+            parsed.archetypeTitle &&
+            typeof parsed.archetype === "string" &&
+            VALID_ARCHETYPES.includes(parsed.archetype as AttachmentArchetype) &&
+            typeof parsed.anxiousRaw === "number" &&
+            Number.isFinite(parsed.anxiousRaw) &&
+            parsed.anxiousRaw >= 1 &&
+            parsed.anxiousRaw <= 5 &&
+            typeof parsed.avoidantRaw === "number" &&
+            Number.isFinite(parsed.avoidantRaw) &&
+            parsed.avoidantRaw >= 1 &&
+            parsed.avoidantRaw <= 5 &&
+            typeof parsed.anxiousPercent === "number" &&
+            Number.isFinite(parsed.anxiousPercent) &&
+            parsed.anxiousPercent >= 0 &&
+            parsed.anxiousPercent <= 100 &&
+            typeof parsed.avoidantPercent === "number" &&
+            Number.isFinite(parsed.avoidantPercent) &&
+            parsed.avoidantPercent >= 0 &&
+            parsed.avoidantPercent <= 100
+          ) {
+            initialScoreData = parsed;
+            setScoreData(parsed);
           }
         }
       }
@@ -92,7 +115,10 @@ export function TeaserView() {
           sessionStorage.getItem("assessment_answers") ||
           localStorage.getItem("latest_assessment_answers");
         if (rawAnswers) {
-          foundAnswers = JSON.parse(rawAnswers);
+          const parsedAns = JSON.parse(rawAnswers);
+          if (parsedAns && typeof parsedAns === "object" && !Array.isArray(parsedAns)) {
+            foundAnswers = parsedAns;
+          }
         }
         const rawStatus =
           sessionStorage.getItem("assessment_relationship_status") ||
@@ -109,9 +135,10 @@ export function TeaserView() {
     if (foundStatus) setRelationshipStatus(foundStatus);
 
     if (!initialScoreData) {
-      // Fallback demo score if user lands directly on teaser
-      const fallback = calculateAssessmentScores({}, "single");
-      setScoreData(fallback);
+      // Recompute from stored answers if available, otherwise fallback demo score
+      const statusArg = (foundStatus as RelationshipStatus) || "single";
+      const recomputed = calculateAssessmentScores(foundAnswers || {}, statusArg);
+      setScoreData(recomputed);
     }
   }, []);
 

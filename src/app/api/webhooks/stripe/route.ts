@@ -6,8 +6,32 @@ import { stripe } from "@/lib/stripe";
 import { sendReportUnlockEmail } from "@/lib/email";
 import { signResultToken } from "@/lib/jwt";
 import { getAppUrl } from "@/lib/url";
+import { ARCHETYPE_PROFILES } from "@/data/archetypes";
 import { AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import Stripe from "stripe";
+
+const VALID_ARCHETYPES: AttachmentArchetype[] = [
+  "Secure",
+  "Anxious-Preoccupied",
+  "Dismissive-Avoidant",
+  "Fearful-Avoidant",
+];
+
+const VALID_RELATIONSHIP_STATUSES: RelationshipStatus[] = [
+  "single",
+  "dating",
+  "in_relationship",
+  "complicated",
+  "healing",
+];
+
+function parseBoundedNumber(val: unknown, min: number, max: number, fallback: number): number {
+  if (val === undefined || val === null || String(val).trim() === "") {
+    return fallback;
+  }
+  const num = Number(val);
+  return Number.isFinite(num) && num >= min && num <= max ? num : fallback;
+}
 
 export async function POST(req: NextRequest) {
   const payload = await req.text();
@@ -18,7 +42,12 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    if (!sig || !webhookSecret || webhookSecret.includes("placeholder")) {
+    if (
+      !sig ||
+      !webhookSecret ||
+      webhookSecret.includes("placeholder") ||
+      webhookSecret === "whsec_..."
+    ) {
       // In production, missing signature or webhook secret is strictly disallowed
       if (isProduction) {
         console.error("[Stripe Webhook] Missing stripe-signature header or unconfigured webhook secret in production.");
@@ -75,17 +104,27 @@ export async function POST(req: NextRequest) {
     }
 
     const resultId = metadata.resultId;
-    const archetype = (metadata.archetype as AttachmentArchetype) || "Secure";
-    const numAnxiousRaw = Number(metadata.anxiousRaw) || 3.0;
-    const numAvoidantRaw = Number(metadata.avoidantRaw) || 3.0;
-    const numAnxiousPercent = Number(metadata.anxiousPercent) || 50;
-    const numAvoidantPercent = Number(metadata.avoidantPercent) || 50;
-    const relationshipStatus = (metadata.relationshipStatus as RelationshipStatus) || undefined;
+    const archetype: AttachmentArchetype =
+      metadata.archetype && VALID_ARCHETYPES.includes(metadata.archetype as AttachmentArchetype)
+        ? (metadata.archetype as AttachmentArchetype)
+        : "Secure";
+    const numAnxiousRaw = parseBoundedNumber(metadata.anxiousRaw, 1, 5, 3.0);
+    const numAvoidantRaw = parseBoundedNumber(metadata.avoidantRaw, 1, 5, 3.0);
+    const numAnxiousPercent = parseBoundedNumber(metadata.anxiousPercent, 0, 100, 50);
+    const numAvoidantPercent = parseBoundedNumber(metadata.avoidantPercent, 0, 100, 50);
+    const relationshipStatus: RelationshipStatus | undefined =
+      metadata.relationshipStatus &&
+      VALID_RELATIONSHIP_STATUSES.includes(metadata.relationshipStatus as RelationshipStatus)
+        ? (metadata.relationshipStatus as RelationshipStatus)
+        : undefined;
 
     let parsedAnswers: Record<number, number> | undefined = undefined;
     if (metadata.answers) {
       try {
-        parsedAnswers = JSON.parse(metadata.answers);
+        const parsed = JSON.parse(metadata.answers);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          parsedAnswers = parsed;
+        }
       } catch (parseErr) {
         console.warn("[Stripe Webhook] Failed to parse answers metadata JSON:", parseErr);
       }
@@ -122,10 +161,11 @@ export async function POST(req: NextRequest) {
 
     if (userEmail && resultId && unlockedToken) {
       try {
+        const fullArchetypeTitle = ARCHETYPE_PROFILES[archetype]?.archetypeTitle || archetype;
         const emailResult = await sendReportUnlockEmail({
           toEmail: userEmail,
           reportUrl,
-          archetypeTitle: archetype,
+          archetypeTitle: fullArchetypeTitle,
         });
         if (!emailResult.success) {
           console.error(`[Stripe Webhook] Failed to dispatch unlock email to ${userEmail}:`, emailResult.error);

@@ -1,14 +1,21 @@
-import { verifyResultToken } from "@/lib/jwt";
+import { verifyResultToken, signResultToken } from "@/lib/jwt";
 
 export const runtime = "edge";
 
 import { stripe } from "@/lib/stripe";
-import { calculateAssessmentScores, getPartnerAttractionWarning } from "@/lib/scoring";
+import {
+  calculateAssessmentScores,
+  getPartnerAttractionWarning,
+  getDefaultConflictShadow,
+  getDefaultChildhoodWound,
+} from "@/lib/scoring";
 import { ARCHETYPE_PROFILES } from "@/data/archetypes";
 import { AttachmentArchetype, RelationshipStatus } from "@/types/assessment";
 import { PremiumReportView } from "@/components/PremiumReportView";
+import { ReportUnlockClientFallback } from "@/components/ReportUnlockClientFallback";
+import { PaymentStatusRefreshButton } from "@/components/PaymentStatusRefreshButton";
 import Link from "next/link";
-import { Lock, ArrowRight } from "lucide-react";
+import { Lock, ArrowRight, Clock } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -23,6 +30,14 @@ const VALID_ARCHETYPES: AttachmentArchetype[] = [
   "Fearful-Avoidant",
 ];
 
+const VALID_RELATIONSHIP_STATUSES: RelationshipStatus[] = [
+  "single",
+  "dating",
+  "in_relationship",
+  "complicated",
+  "healing",
+];
+
 interface ReportPageProps {
   params: {
     resultId: string;
@@ -34,6 +49,14 @@ interface ReportPageProps {
   };
 }
 
+function parseBoundedNumber(val: unknown, min: number, max: number, fallback: number): number {
+  if (val === undefined || val === null || String(val).trim() === "") {
+    return fallback;
+  }
+  const num = Number(val);
+  return Number.isFinite(num) && num >= min && num <= max ? num : fallback;
+}
+
 export default async function ReportPage({ params, searchParams }: ReportPageProps) {
   const { resultId } = params;
   const token = typeof searchParams.token === "string" ? searchParams.token : Array.isArray(searchParams.token) ? searchParams.token[0] : undefined;
@@ -41,7 +64,9 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
   const mock_success = typeof searchParams.mock_success === "string" ? searchParams.mock_success : Array.isArray(searchParams.mock_success) ? searchParams.mock_success[0] : undefined;
 
   let isUnlocked = false;
-  let targetArchetype: AttachmentArchetype = "Anxious-Preoccupied";
+  let isPendingSettlement = false;
+  let activeToken: string | undefined = undefined;
+  let targetArchetype: AttachmentArchetype = "Secure";
   let anxiousRaw = 3.0;
   let avoidantRaw = 3.0;
   let anxiousPercent = 50;
@@ -54,25 +79,26 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
     const verified = await verifyResultToken(token);
     if (verified && verified.isUnlocked && verified.resultId === resultId) {
       isUnlocked = true;
+      activeToken = token;
       if (VALID_ARCHETYPES.includes(verified.archetype)) {
         targetArchetype = verified.archetype;
       }
-      if (!Number.isNaN(verified.anxiousRaw) && verified.anxiousRaw >= 1 && verified.anxiousRaw <= 5) {
-        anxiousRaw = verified.anxiousRaw;
-      }
-      if (!Number.isNaN(verified.avoidantRaw) && verified.avoidantRaw >= 1 && verified.avoidantRaw <= 5) {
-        avoidantRaw = verified.avoidantRaw;
-      }
-      if (!Number.isNaN(verified.anxiousPercent) && verified.anxiousPercent >= 0 && verified.anxiousPercent <= 100) {
-        anxiousPercent = verified.anxiousPercent;
-      }
-      if (!Number.isNaN(verified.avoidantPercent) && verified.avoidantPercent >= 0 && verified.avoidantPercent <= 100) {
-        avoidantPercent = verified.avoidantPercent;
-      }
-      if (verified.relationshipStatus) {
+      anxiousRaw = parseBoundedNumber(verified.anxiousRaw, 1, 5, 3.0);
+      avoidantRaw = parseBoundedNumber(verified.avoidantRaw, 1, 5, 3.0);
+      anxiousPercent = parseBoundedNumber(verified.anxiousPercent, 0, 100, 50);
+      avoidantPercent = parseBoundedNumber(verified.avoidantPercent, 0, 100, 50);
+      if (
+        verified.relationshipStatus &&
+        VALID_RELATIONSHIP_STATUSES.includes(verified.relationshipStatus)
+      ) {
         relationshipStatus = verified.relationshipStatus;
       }
-      if (verified.answers && Object.keys(verified.answers).length > 0) {
+      if (
+        verified.answers &&
+        typeof verified.answers === "object" &&
+        !Array.isArray(verified.answers) &&
+        Object.keys(verified.answers).length > 0
+      ) {
         userAnswers = verified.answers;
       }
     }
@@ -84,34 +110,28 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
       const session = await stripe.checkout.sessions.retrieve(session_id);
       if (session.payment_status === "paid" && session.metadata?.resultId === resultId) {
         isUnlocked = true;
-        if (session.metadata?.archetype) {
-          const metaArchetype = session.metadata.archetype as AttachmentArchetype;
-          if (VALID_ARCHETYPES.includes(metaArchetype)) {
-            targetArchetype = metaArchetype;
+        const customerEmail = session.customer_details?.email || undefined;
+        if (session.metadata) {
+          if (session.metadata.archetype) {
+            const metaArchetype = session.metadata.archetype as AttachmentArchetype;
+            if (VALID_ARCHETYPES.includes(metaArchetype)) {
+              targetArchetype = metaArchetype;
+            }
           }
-          const rawAnx = Number(session.metadata.anxiousRaw);
-          if (!Number.isNaN(rawAnx) && rawAnx >= 1 && rawAnx <= 5) {
-            anxiousRaw = rawAnx;
-          }
-          const rawAvo = Number(session.metadata.avoidantRaw);
-          if (!Number.isNaN(rawAvo) && rawAvo >= 1 && rawAvo <= 5) {
-            avoidantRaw = rawAvo;
-          }
-          const pctAnx = Number(session.metadata.anxiousPercent);
-          if (!Number.isNaN(pctAnx) && pctAnx >= 0 && pctAnx <= 100) {
-            anxiousPercent = pctAnx;
-          }
-          const pctAvo = Number(session.metadata.avoidantPercent);
-          if (!Number.isNaN(pctAvo) && pctAvo >= 0 && pctAvo <= 100) {
-            avoidantPercent = pctAvo;
-          }
-          if (session.metadata.relationshipStatus) {
+          anxiousRaw = parseBoundedNumber(session.metadata.anxiousRaw, 1, 5, anxiousRaw);
+          avoidantRaw = parseBoundedNumber(session.metadata.avoidantRaw, 1, 5, avoidantRaw);
+          anxiousPercent = parseBoundedNumber(session.metadata.anxiousPercent, 0, 100, anxiousPercent);
+          avoidantPercent = parseBoundedNumber(session.metadata.avoidantPercent, 0, 100, avoidantPercent);
+          if (
+            session.metadata.relationshipStatus &&
+            VALID_RELATIONSHIP_STATUSES.includes(session.metadata.relationshipStatus as RelationshipStatus)
+          ) {
             relationshipStatus = session.metadata.relationshipStatus as RelationshipStatus;
           }
           if (session.metadata.answers) {
             try {
               const parsed = JSON.parse(session.metadata.answers);
-              if (parsed && typeof parsed === "object") {
+              if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
                 userAnswers = parsed;
               }
             } catch (jsonErr) {
@@ -119,6 +139,31 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
             }
           }
         }
+
+        // Issue permanent signed JWT token on the server so client can persist it and avoid repeated Stripe API calls
+        try {
+          activeToken = await signResultToken({
+            resultId,
+            email: customerEmail,
+            anxiousRaw,
+            avoidantRaw,
+            anxiousPercent,
+            avoidantPercent,
+            archetype: targetArchetype,
+            relationshipStatus,
+            answers: userAnswers,
+            isUnlocked: true,
+            createdAt: Date.now(),
+          });
+        } catch (tokenErr) {
+          console.warn("Failed to sign permanent result token after session verification:", tokenErr);
+        }
+      } else if (
+        session.metadata?.resultId === resultId &&
+        session.status === "complete" &&
+        (session.payment_status === "unpaid" || (session.payment_status as string) === "processing")
+      ) {
+        isPendingSettlement = true;
       }
     } catch (err) {
       console.error("Stripe session retrieval verification error:", err);
@@ -128,12 +173,67 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
   // 3. Fallback for mock demo success (strictly limited to non-production development environments)
   if (!isUnlocked && mock_success === "true" && process.env.NODE_ENV !== "production") {
     isUnlocked = true;
+    try {
+      activeToken = await signResultToken({
+        resultId,
+        anxiousRaw,
+        avoidantRaw,
+        anxiousPercent,
+        avoidantPercent,
+        archetype: targetArchetype,
+        relationshipStatus,
+        answers: userAnswers,
+        isUnlocked: true,
+        createdAt: Date.now(),
+      });
+    } catch {
+      // Safe fallback
+    }
+  }
+
+  // Guard: If payment was completed but settlement is pending (delayed payment methods)
+  if (isPendingSettlement) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="w-14 h-14 rounded-full bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto mb-6">
+          <Clock className="w-7 h-7" />
+        </div>
+        <h1 className="font-serif text-3xl font-bold text-stone-900 mb-3">
+          Payment Processing & Settlement Pending
+        </h1>
+        <p className="text-stone-600 text-sm leading-relaxed mb-6">
+          Your payment was submitted successfully and is currently being processed by your bank or payment provider.
+          Once the transaction settles, your comprehensive 12-page report will unlock automatically.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 text-left mb-8 space-y-2">
+          <p className="font-semibold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block" />
+            Please do not submit another payment
+          </p>
+          <p>
+            Depending on your payment method (e.g. bank transfer, iDEAL, SEPA, or asynchronous clearing), confirmation can take anywhere from a few minutes to several business hours. We have securely saved your assessment data.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <PaymentStatusRefreshButton />
+          <Link
+            href="/quiz"
+            className="w-full sm:w-auto inline-flex items-center justify-center text-xs font-semibold text-stone-600 hover:text-stone-900 px-4 py-3"
+          >
+            Return to Assessment
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Guard: If not verified/unlocked, display locked access gate
   if (!isUnlocked) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <ReportUnlockClientFallback resultId={resultId} />
         <div className="w-14 h-14 rounded-full bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center mx-auto mb-6">
           <Lock className="w-7 h-7" />
         </div>
@@ -173,19 +273,23 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
     scoreData.anxiousPercent = anxiousPercent;
     scoreData.avoidantPercent = avoidantPercent;
     scoreData.archetype = targetArchetype;
-    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
+    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Secure"];
     scoreData.archetypeTitle = profile.archetypeTitle;
     scoreData.shadowSubtype = profile.shadowSubtype;
     scoreData.shortSummary = profile.shortSummary;
     scoreData.deepDive = profile.deepDive;
+    scoreData.conflictShadow = getDefaultConflictShadow(targetArchetype);
+    scoreData.childhoodWound = getDefaultChildhoodWound(targetArchetype);
     scoreData.partnerAttractionWarning = getPartnerAttractionWarning(targetArchetype);
   } else if (targetArchetype && scoreData.archetype !== targetArchetype) {
     scoreData.archetype = targetArchetype;
-    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Anxious-Preoccupied"];
+    const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Secure"];
     scoreData.archetypeTitle = profile.archetypeTitle;
     scoreData.shadowSubtype = profile.shadowSubtype;
     scoreData.shortSummary = profile.shortSummary;
     scoreData.deepDive = profile.deepDive;
+    scoreData.conflictShadow = getDefaultConflictShadow(targetArchetype);
+    scoreData.childhoodWound = getDefaultChildhoodWound(targetArchetype);
     scoreData.partnerAttractionWarning = getPartnerAttractionWarning(targetArchetype);
   }
 
@@ -194,6 +298,7 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
       scoreData={scoreData}
       resultId={resultId}
       isUnlocked={isUnlocked}
+      token={activeToken}
     />
   );
 }

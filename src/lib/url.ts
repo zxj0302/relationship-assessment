@@ -46,11 +46,17 @@ export function isValidHost(host: string, isProduction: boolean): boolean {
     if (isPrivateOrLocalIp(hostname)) return false;
   }
 
-  // Allow explicitly configured public app URL host
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) {
+  // Allow explicitly configured app URL hosts (runtime APP_URL and build/public NEXT_PUBLIC_APP_URL)
+  const configuredEnvUrls = [process.env.APP_URL, process.env.NEXT_PUBLIC_APP_URL];
+  for (const rawConfig of configuredEnvUrls) {
+    const configured = rawConfig?.trim();
+    if (!configured) continue;
     try {
-      const configuredHost = new URL(configured).hostname.toLowerCase();
+      const parsedConfig = configured.startsWith("http") ? new URL(configured) : new URL(`https://${configured}`);
+      const configuredHost = parsedConfig.hostname.toLowerCase();
+      if (isProduction && isPrivateOrLocalIp(configuredHost)) {
+        continue;
+      }
       if (hostname === configuredHost || hostname.endsWith(`.${configuredHost}`)) {
         return true;
       }
@@ -59,20 +65,39 @@ export function isValidHost(host: string, isProduction: boolean): boolean {
     }
   }
 
-  // Allow Vercel deployment hosts (e.g. *.vercel.app)
-  const vercelEnv = process.env.VERCEL_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (vercelEnv) {
-    const vHost = vercelEnv.replace(/^https?:\/\//, "").split("/")[0].split(":")[0].toLowerCase();
-    if (hostname === vHost || hostname.endsWith(".vercel.app")) {
-      return true;
+  // Allow project-specific Vercel and Cloudflare Pages deployment hosts from environment
+  // (never multi-tenant wildcard *.vercel.app or *.pages.dev)
+  const platformEnvUrls = [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.CF_PAGES_URL,
+  ];
+  for (const envUrl of platformEnvUrls) {
+    if (!envUrl) continue;
+    const trimmedEnv = envUrl.trim();
+    if (!trimmedEnv) continue;
+    try {
+      const normalized = trimmedEnv.startsWith("http") ? trimmedEnv : `https://${trimmedEnv}`;
+      const parsedEnv = new URL(normalized);
+      const envHost = parsedEnv.hostname.toLowerCase();
+      if (envHost && (hostname === envHost || hostname.endsWith(`.${envHost}`))) {
+        return true;
+      }
+    } catch {
+      const fallbackHost = trimmedEnv.replace(/^https?:\/\//, "").split("/")[0].split(":")[0].toLowerCase();
+      if (fallbackHost && (hostname === fallbackHost || hostname.endsWith(`.${fallbackHost}`))) {
+        return true;
+      }
     }
   }
 
-  // Allow canonical domain and subdomains
+  // Allow canonical domain, verified subdomains, and project-specific Cloudflare Pages domain (from wrangler.toml)
   if (
     hostname === "attachmentshadow.com" ||
     hostname.endsWith(".attachmentshadow.com") ||
-    hostname.endsWith(".vercel.app")
+    hostname === "relationship-assessment.pages.dev" ||
+    hostname.endsWith(".relationship-assessment.pages.dev")
   ) {
     return true;
   }
@@ -88,13 +113,20 @@ export function isValidHost(host: string, isProduction: boolean): boolean {
 export function getAppUrl(req?: NextRequest | Request, metadataUrl?: string): string {
   const isProduction = process.env.NODE_ENV === "production";
 
-  // 1. Prioritize explicitly configured NEXT_PUBLIC_APP_URL if valid
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredUrl) {
+  // 1. Prioritize explicitly configured runtime APP_URL or NEXT_PUBLIC_APP_URL if valid
+  // In production, ignore localhost/127.0.0.1 values (e.g. baked in from .env.local during build) and fall back to request host
+  const configuredCandidates = [process.env.APP_URL?.trim(), process.env.NEXT_PUBLIC_APP_URL?.trim()];
+  for (const configuredUrl of configuredCandidates) {
+    if (!configuredUrl) continue;
     try {
-      const parsed = new URL(configuredUrl);
-      if (isValidHost(parsed.host, isProduction)) {
-        return configuredUrl.replace(/\/+$/, "");
+      const normalizedConfig = configuredUrl.startsWith("http") ? configuredUrl : `https://${configuredUrl}`;
+      const parsed = new URL(normalizedConfig);
+      if (isProduction && isPrivateOrLocalIp(parsed.hostname)) {
+        continue;
+      }
+      const isAllowedProto = isProduction ? parsed.protocol === "https:" : parsed.protocol === "http:" || parsed.protocol === "https:";
+      if (isAllowedProto && isValidHost(parsed.host, isProduction)) {
+        return normalizedConfig.replace(/\/+$/, "");
       }
     } catch {
       // Ignore invalid configured URL

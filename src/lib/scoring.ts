@@ -43,6 +43,78 @@ export function getPartnerAttractionWarning(archetype: AttachmentArchetype): Par
   }
 }
 
+export function getDefaultConflictShadow(archetype: AttachmentArchetype): ConflictShadowProfile {
+  switch (archetype) {
+    case "Anxious-Preoccupied":
+      return {
+        shadowType: "Fight",
+        title: "The Urgent Pursuer (Fight Response)",
+        trigger: "Delayed communication, ambiguity, or someone walking away mid-disagreement.",
+        defaultReaction: "You experience an overwhelming physical adrenaline spike that demands immediate resolution, often turning into barrage texting, cross-examination, or protest outbursts.",
+        nervousSystemReframe: "Urgency is rarely clarity. True emotional safety requires learning to sit with the silence without confusing delay with abandonment."
+      };
+    case "Dismissive-Avoidant":
+      return {
+        shadowType: "Flight",
+        title: "The Fortified Evader (Flight Response)",
+        trigger: "Intense emotional confrontations, tearful pleas, or demands for immediate disclosure.",
+        defaultReaction: "Your system floods into sensory overload; you shut down, become stony, or physically leave the room to protect your nervous system from short-circuiting.",
+        nervousSystemReframe: "Withdrawing keeps you safe in childhood, but starves adult intimacy. Practice signaling: 'I need 20 minutes to regulate, but I promise to return to you.'"
+      };
+    case "Fearful-Avoidant":
+      return {
+        shadowType: "Freeze",
+        title: "The Dissociated Watcher (Freeze Response)",
+        trigger: "Overwhelming chaos, loud arguments, or threats of relational collapse.",
+        defaultReaction: "You go emotionally numb, feel disconnected from your physical body, and watch the conflict happen like a detached movie spectator.",
+        nervousSystemReframe: "Numbness is a shock absorber. Gently bring sensations back into your hands and feet before attempting to speak your feelings."
+      };
+    case "Secure":
+    default:
+      return {
+        shadowType: "Secure",
+        title: "The Secure Regulator (Calm Co-Regulation)",
+        trigger: "Interpersonal tension, heated discussions, or partner distress.",
+        defaultReaction: "You remain emotionally centered, listen actively without immediate defensiveness, and foster collaborative repair rather than falling into rigid autonomic fight/flight/freeze/fawn reflexes.",
+        nervousSystemReframe: "Healthy co-regulation is your relational superpower; protect your emotional battery by sustaining clear, loving boundaries."
+      };
+  }
+}
+
+export function getDefaultChildhoodWound(archetype: AttachmentArchetype): ChildhoodWoundProfile {
+  switch (archetype) {
+    case "Dismissive-Avoidant":
+      return {
+        title: "The Self-Reliant Fortress",
+        subconsciousContract: "Nobody will be there when it truly matters, so I must never need anyone.",
+        coreFear: "Entrusting my survival or peace to another human being will inevitably lead to devastating betrayal.",
+        healingMantra: "Letting down my guard is not surrender; it is the courage to connect."
+      };
+    case "Fearful-Avoidant":
+      return {
+        title: "The Chaos Navigator",
+        subconsciousContract: "Love is synonymous with unpredictability, emotional storms, and dramatic highs and lows.",
+        coreFear: "Peace and stability feel like boredom or pending disaster.",
+        healingMantra: "Calm love is not dangerous; calm love is where my nervous system truly heals."
+      };
+    case "Anxious-Preoccupied":
+      return {
+        title: "The Emotionally Parentified Child",
+        subconsciousContract: "I must be the therapist, caretaker, and stabilizer for others to be allowed in their life.",
+        coreFear: "If I am not actively fixing someone's pain, I have zero value and will be discarded.",
+        healingMantra: "I am allowed to receive love without having to earn it through emotional labor."
+      };
+    case "Secure":
+    default:
+      return {
+        title: "The Secure Relational Blueprint (Healthy Family Foundation)",
+        subconsciousContract: "I am inherently worthy of love, emotional safety, and acceptance without having to prove my value or hide my humanity.",
+        coreFear: "Relational disconnection, tempered by the inner confidence that ruptures can be repaired and healthy boundaries respected.",
+        healingMantra: "My nervous system knows peace; I can welcome genuine closeness and trust without fear of losing myself."
+      };
+  }
+}
+
 export function calculateAssessmentScores(
   answers: Record<number, number>,
   relationshipStatus?: RelationshipStatus
@@ -56,8 +128,18 @@ export function calculateAssessmentScores(
   let childhoodSum = 0;
   let childhoodCount = 0;
 
+  // Safe helper to extract and validate numeric answer value in [1, 5]
+  const getAnswerNum = (id: number, fallback = 3): number => {
+    const val = answers[id];
+    if (val === undefined || val === null || String(val).trim() === "") {
+      return fallback;
+    }
+    const num = Number(val);
+    return Number.isFinite(num) && num >= 1 && num <= 5 ? num : fallback;
+  };
+
   QUESTION_BANK.forEach((q) => {
-    const rawVal = answers[q.id] ?? 3; // Default neutral if unanswered
+    const rawVal = getAnswerNum(q.id, 3); // Default neutral if unanswered or invalid
     const scoredVal = q.reversed ? 6 - rawVal : rawVal;
 
     switch (q.dimension) {
@@ -111,17 +193,25 @@ export function calculateAssessmentScores(
 
   // Determine Conflict Shadow Type
   // Q14 = Fight, Q13 = Flight/Shut down, Q18 = Freeze/Dissociate, Q15 = Fawn/Over-apologize, Q16 = Secure co-regulation
-  const fightScore = answers[14] ?? 3;
-  const flightScore = answers[13] ?? 3;
-  const fawnScore = answers[15] ?? 3;
-  const freezeScore = answers[18] ?? 3;
-  const secureRegulationScore = answers[16] ?? 3;
+  const fightScore = getAnswerNum(14);
+  const flightScore = getAnswerNum(13);
+  const fawnScore = getAnswerNum(15);
+  const freezeScore = getAnswerNum(18);
+  const secureRegulationScore = getAnswerNum(16);
 
   const maxConflictScore = Math.max(fightScore, flightScore, fawnScore, freezeScore);
+  const allConflictTied =
+    fightScore === flightScore &&
+    fightScore === fawnScore &&
+    fightScore === freezeScore;
+
   let conflictShadow: ConflictShadowProfile;
 
-  // If all defensive responses are low, or user exhibits strong secure regulation, assign healthy profile
-  if (maxConflictScore < 3 || (archetype === "Secure" && maxConflictScore <= 3 && secureRegulationScore >= 4)) {
+  // When conflict stress is elevated across all fronts (tied high score > 3), align shadow response with core archetype
+  if (allConflictTied && maxConflictScore > 3) {
+    conflictShadow = getDefaultConflictShadow(archetype);
+  } else if (maxConflictScore <= 3 || (archetype === "Secure" && secureRegulationScore >= 4)) {
+    // If all defensive responses are neutral/low (<= 3), user exhibits strong secure regulation, assign healthy profile
     conflictShadow = {
       shadowType: "Secure",
       title: "The Secure Regulator (Calm Co-Regulation)",
@@ -165,18 +255,26 @@ export function calculateAssessmentScores(
 
   // Determine Childhood Wound Blueprint
   // Q19 = Good kid/Achiever, Q20 = Chaos, Q21 = Parentification, Q22 = Self-reliance, Q23 = Caregiver validation, Q24 = Core defectiveness
-  const parentifiedScore = answers[21] ?? 3;
-  const achieverScore = answers[19] ?? 3;
-  const fortressScore = answers[22] ?? 3;
-  const chaosScore = answers[20] ?? 3;
-  const defectivenessScore = answers[24] ?? 3;
-  const secureCareScore = answers[23] ?? 3;
+  const parentifiedScore = getAnswerNum(21);
+  const achieverScore = getAnswerNum(19);
+  const fortressScore = getAnswerNum(22);
+  const chaosScore = getAnswerNum(20);
+  const defectivenessScore = getAnswerNum(24);
+  const secureCareScore = getAnswerNum(23);
 
   const maxWoundScore = Math.max(parentifiedScore, achieverScore, fortressScore, chaosScore, defectivenessScore);
+  const allWoundsTied =
+    parentifiedScore === achieverScore &&
+    achieverScore === fortressScore &&
+    fortressScore === chaosScore &&
+    chaosScore === defectivenessScore;
+
   let childhoodWound: ChildhoodWoundProfile;
 
-  // When all trauma/defense markers are low, or caregivers provided consistent validation, assign healthy family foundation
-  if (maxWoundScore < 3 || (secureCareScore >= 4 && maxWoundScore <= 3)) {
+  // If all childhood trauma markers are elevated and tied (> 3), map to core childhood wound by attachment archetype
+  if (allWoundsTied && maxWoundScore > 3) {
+    childhoodWound = getDefaultChildhoodWound(archetype);
+  } else if (maxWoundScore <= 3 || (archetype === "Secure" && secureCareScore >= 4)) {
     childhoodWound = {
       title: "The Secure Relational Blueprint (Healthy Family Foundation)",
       subconsciousContract: "I am inherently worthy of love, emotional safety, and acceptance without having to prove my value or hide my humanity.",

@@ -31,7 +31,7 @@ export async function sendReportUnlockEmail({
   archetypeTitle: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || apiKey.includes("placeholder")) {
+  if (!apiKey || apiKey.includes("placeholder") || apiKey === "re_...") {
     console.log(`[Email Mock] Skipping actual Resend dispatch. Report URL for ${toEmail}: ${reportUrl}`);
     return { success: true, mocked: true };
   }

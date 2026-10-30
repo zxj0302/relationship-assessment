@@ -54,11 +54,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Validate Raw Scores (Likert scale 1.0 - 5.0)
-    const numAnxiousRaw = Number(anxiousRaw);
-    const numAvoidantRaw = Number(avoidantRaw);
+    const isNonEmptyValue = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== "";
+    const numAnxiousRaw = isNonEmptyValue(anxiousRaw) ? Number(anxiousRaw) : NaN;
+    const numAvoidantRaw = isNonEmptyValue(avoidantRaw) ? Number(avoidantRaw) : NaN;
     if (
-      Number.isNaN(numAnxiousRaw) ||
-      Number.isNaN(numAvoidantRaw) ||
+      !Number.isFinite(numAnxiousRaw) ||
+      !Number.isFinite(numAvoidantRaw) ||
       numAnxiousRaw < 1.0 ||
       numAnxiousRaw > 5.0 ||
       numAvoidantRaw < 1.0 ||
@@ -71,11 +72,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Validate Percentage Scores (0 - 100)
-    const numAnxiousPercent = Number(anxiousPercent);
-    const numAvoidantPercent = Number(avoidantPercent);
+    const numAnxiousPercent = isNonEmptyValue(anxiousPercent) ? Number(anxiousPercent) : NaN;
+    const numAvoidantPercent = isNonEmptyValue(avoidantPercent) ? Number(avoidantPercent) : NaN;
     if (
-      Number.isNaN(numAnxiousPercent) ||
-      Number.isNaN(numAvoidantPercent) ||
+      !Number.isFinite(numAnxiousPercent) ||
+      !Number.isFinite(numAvoidantPercent) ||
       numAnxiousPercent < 0 ||
       numAnxiousPercent > 100 ||
       numAvoidantPercent < 0 ||
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
     // 6. Validate & Sanitize 24 Questions Answer Dictionary (strict bounds [1, 24] and integer Likert [1, 5])
     let serializedAnswers = "{}";
     const validatedAnswers: Record<number, number> = {};
-    if (answers && typeof answers === "object") {
+    if (answers && typeof answers === "object" && !Array.isArray(answers)) {
       for (const [key, val] of Object.entries(answers)) {
         const qId = Number(key);
         const scoreVal = Number(val);
