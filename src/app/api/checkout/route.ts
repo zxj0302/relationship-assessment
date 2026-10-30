@@ -165,6 +165,7 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: "Full 12-Page Attachment & Relationship Shadow Assessment Report",
               description: `Deep subconscious blueprint, 30-Day Rewiring Plan, and Partner Compatibility Analysis for ${archetype}.`,
+              tax_code: "txcd_10000000",
               images: [
                 "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=600&q=80",
               ],
