@@ -27,6 +27,13 @@ const VALID_ARCHETYPES: AttachmentArchetype[] = [
   "Fearful-Avoidant",
 ];
 
+const ARCHETYPE_POPULATION_SHARE: Record<AttachmentArchetype, number> = {
+  Secure: 50,
+  "Dismissive-Avoidant": 25,
+  "Anxious-Preoccupied": 19,
+  "Fearful-Avoidant": 6,
+};
+
 export function TeaserView() {
   const searchParams = useSearchParams();
   const [scoreData, setScoreData] = useState<ScoreBreakdown | null>(null);
@@ -211,7 +218,7 @@ export function TeaserView() {
         </div>
       )}
 
-      {/* Assessment Status & Instant Delivery Bar */}
+      {/* Assessment Status & Normative Cohort Bar */}
       <div className="bg-gradient-to-r from-stone-900 to-stone-800 text-stone-100 rounded-2xl p-3.5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs shadow-md">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 relative">
@@ -219,7 +226,8 @@ export function TeaserView() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-stone-200">
-            <strong>Assessment Complete</strong> • 24 Behavioral &amp; Somatic Markers Scored
+            <strong>{scoreData.archetype} Quadrant</strong> • Shared by{" "}
+            <strong>~{ARCHETYPE_POPULATION_SHARE[scoreData.archetype] || 20}% of adults</strong> in attachment studies
           </span>
         </div>
 
@@ -290,110 +298,116 @@ export function TeaserView() {
         </div>
 
         {/* Teaser 1: Fatal Attraction Loop */}
-        <div className="relative overflow-hidden rounded-3xl border border-rose-200/90 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-rose-100 text-rose-800">
+        <div className="overflow-hidden rounded-3xl border border-rose-200/90 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start gap-2.5">
+              <span className="p-1.5 rounded-lg bg-rose-100 text-rose-800 shrink-0 mt-0.5">
                 <Flame className="w-4 h-4" />
               </span>
-              <h3 className="font-bold text-stone-900 text-base">
+              <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug">
                 {scoreData.archetype === "Secure"
                   ? `Your Natural Attraction Matrix: ${scoreData.partnerAttractionWarning?.drawnToType || "Emotionally Available Partners"}`
                   : `Your Toxic Attraction Magnet: ${scoreData.partnerAttractionWarning?.drawnToType || "The Avoidant Ghost"}`}
               </h3>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-rose-50 text-rose-800 rounded-full border border-rose-200">
+            <span className="text-xs font-semibold px-2.5 py-1 bg-rose-50 text-rose-800 rounded-full border border-rose-200 shrink-0">
               Locked
             </span>
           </div>
 
-          {scoreData.archetype === "Secure" ? (
-            <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
-              <p>
-                You naturally gravitate toward mutual vulnerability, emotional presence, and stability. However, even secure nervous systems experience blind spots when encountering avoidant or anxious dysregulation...
-              </p>
-              <p>
-                Discover how your secure foundation can withstand complex attachment dynamics and elevate your relationship fulfillment.
-              </p>
-            </div>
-          ) : (
-            <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
-              <p>
-                Your subconscious mind confuses the emotional unavailability and unpredictability of this partner type with authentic chemistry. Whenever they pull back, your somatic nervous system triggers protest behaviors...
-              </p>
-              <p>
-                The 3 unconscious reasons you attract this specific partner loop and how to permanently short-circuit the chase.
-              </p>
-            </div>
-          )}
+          <div className="relative rounded-2xl bg-stone-50/70 p-4 border border-stone-100 overflow-hidden min-h-[88px] flex items-center justify-center">
+            {scoreData.archetype === "Secure" ? (
+              <div className="filter blur-[4px] select-none opacity-45 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+                <p>
+                  You naturally gravitate toward mutual vulnerability, emotional presence, and stability. However, even secure nervous systems experience blind spots when encountering avoidant or anxious dysregulation...
+                </p>
+                <p>
+                  Discover how your secure foundation can withstand complex attachment dynamics and elevate your relationship fulfillment.
+                </p>
+              </div>
+            ) : (
+              <div className="filter blur-[4px] select-none opacity-45 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+                <p>
+                  Your subconscious mind confuses the emotional unavailability and unpredictability of this partner type with authentic chemistry. Whenever they pull back, your somatic nervous system triggers protest behaviors...
+                </p>
+                <p>
+                  The 3 unconscious reasons you attract this specific partner loop and how to permanently short-circuit the chase.
+                </p>
+              </div>
+            )}
 
-          <div className="absolute inset-0 flex items-center justify-center bg-stone-900/10 backdrop-blur-[2px]">
-            <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
-              <Lock className="w-3.5 h-3.5 text-rose-400" />
-              Unlock Partner Attraction Blueprint
-            </a>
+            <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+              <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                Unlock Partner Attraction Blueprint
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Teaser 2: Conflict Shadow Response */}
-        <div className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800">
+        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start gap-2.5">
+              <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
                 <KeyRound className="w-4 h-4" />
               </span>
-              <h3 className="font-bold text-stone-900 text-base">
-                Your Stress &amp; Conflict Shadow ({scoreData.conflictShadow?.title || "Nervous System Armor"})
+              <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug">
+                Your Stress &amp; Conflict Shadow: {scoreData.conflictShadow?.title || "Nervous System Armor"}
               </h3>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 text-stone-700 rounded-full">
+            <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 text-stone-700 rounded-full shrink-0">
               Locked
             </span>
           </div>
 
-          <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
-            <p>
-              During high-intensity disagreements, your autonomic nervous system collapses into an automatic defense mechanism that sabotages communication before resolution can take place...
-            </p>
-          </div>
+          <div className="relative rounded-2xl bg-stone-50/70 p-4 border border-stone-100 overflow-hidden min-h-[80px] flex items-center justify-center">
+            <div className="filter blur-[4px] select-none opacity-45 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+              <p>
+                During high-intensity disagreements, your autonomic nervous system collapses into an automatic defense mechanism that sabotages communication before resolution can take place...
+              </p>
+            </div>
 
-          <div className="absolute inset-0 flex items-center justify-center bg-stone-900/10 backdrop-blur-[2px]">
-            <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
-              <Lock className="w-3.5 h-3.5 text-rose-400" />
-              Unlock Conflict Shadow Breakdown
-            </a>
+            <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+              <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                Unlock Conflict Shadow Breakdown
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Teaser 3: 30-Day Rewiring Action Plan */}
-        <div className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start gap-2.5">
+              <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 shrink-0 mt-0.5">
                 <FileText className="w-4 h-4" />
               </span>
-              <h3 className="font-bold text-stone-900 text-base">
+              <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug">
                 Your Custom 30-Day Subconscious Rewiring Action Plan
               </h3>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 text-stone-700 rounded-full">
+            <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 text-stone-700 rounded-full shrink-0">
               Locked
             </span>
           </div>
 
-          <div className="filter blur-sm select-none opacity-40 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
-            <p>
-              Week 1: Emotional trigger de-escalation &amp; somatic breathwork scripts.<br />
-              Week 2: Boundary re-negotiation &amp; breaking the protest-behavior cycle.<br />
-              Week 3: Communication verbatim scripts for secure vulnerability.
-            </p>
-          </div>
+          <div className="relative rounded-2xl bg-stone-50/70 p-4 border border-stone-100 overflow-hidden min-h-[84px] flex items-center justify-center">
+            <div className="filter blur-[4px] select-none opacity-45 text-xs sm:text-sm leading-relaxed text-stone-700 space-y-2">
+              <p>
+                Week 1: Emotional trigger de-escalation &amp; somatic breathwork scripts.<br />
+                Week 2: Boundary re-negotiation &amp; breaking the protest-behavior cycle.<br />
+                Week 3: Communication verbatim scripts for secure vulnerability.
+              </p>
+            </div>
 
-          <div className="absolute inset-0 flex items-center justify-center bg-stone-900/10 backdrop-blur-[2px]">
-            <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
-              <Lock className="w-3.5 h-3.5 text-rose-400" />
-              Unlock 30-Day Action Plan
-            </a>
+            <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+              <a href="#checkout-section" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-md hover:bg-stone-800 transition">
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                Unlock 30-Day Action Plan
+              </a>
+            </div>
           </div>
         </div>
       </div>

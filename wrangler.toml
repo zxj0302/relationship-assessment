@@ -2,3 +2,9 @@ name = "relationship-assessment"
 compatibility_date = "2026-10-29"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+APP_URL = "https://relationship-assessment-apv.pages.dev"
+NEXT_PUBLIC_APP_URL = "https://relationship-assessment-apv.pages.dev"
+NEXT_PUBLIC_SUPPORT_EMAIL = "zhuxiangjv+support@gmail.com"
+NEXT_PUBLIC_PRIVACY_EMAIL = "zhuxiangjv+support@gmail.com"

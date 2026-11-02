@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-const SAFE_FALLBACK_PRODUCTION_URL = "https://attachmentshadow.com";
+const SAFE_FALLBACK_PRODUCTION_URL = "https://relationship-assessment-apv.pages.dev";
 const SAFE_FALLBACK_DEV_URL = "http://localhost:3000";
 
 // Strict RFC-compliant hostname & optional port regex (no CRLF, no @, no slashes, no control characters)
@@ -92,10 +92,12 @@ export function isValidHost(host: string, isProduction: boolean): boolean {
     }
   }
 
-  // Allow canonical domain, verified subdomains, and project-specific Cloudflare Pages domain (from wrangler.toml)
+  // Allow canonical domain, verified subdomains, and project-specific Cloudflare Pages domains
   if (
     hostname === "attachmentshadow.com" ||
     hostname.endsWith(".attachmentshadow.com") ||
+    hostname === "relationship-assessment-apv.pages.dev" ||
+    hostname.endsWith(".relationship-assessment-apv.pages.dev") ||
     hostname === "relationship-assessment.pages.dev" ||
     hostname.endsWith(".relationship-assessment.pages.dev")
   ) {

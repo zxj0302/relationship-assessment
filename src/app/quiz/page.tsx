@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function QuizPage() {
   return (
-    <div className="py-6 sm:py-10">
+    <div className="py-1 sm:py-3">
       <QuizFlow />
     </div>
   );

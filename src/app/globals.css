@@ -10,7 +10,7 @@
 }
 
 @media print {
-  header, footer, .no-print {
+  header, footer, canvas, .no-print {
     display: none !important;
   }
   body {

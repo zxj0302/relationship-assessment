@@ -102,6 +102,9 @@ export function QuizFlow() {
 
   const handleSelectStatus = (status: RelationshipStatus) => {
     setRelationshipStatus(status);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleSelectOption = (value: number) => {
@@ -404,13 +407,13 @@ export function QuizFlow() {
       </AnimatePresence>
 
       {/* Question Card Screen */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={currentQuestion.id}
-          initial={{ opacity: 0, x: 15 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -15 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0.35, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
           className="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200/90 shadow-sm mb-6"
         >
           <div className="min-h-[110px] sm:min-h-[120px] flex flex-col justify-center mb-8">

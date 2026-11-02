@@ -46,6 +46,8 @@ interface ReportPageProps {
     token?: string | string[];
     session_id?: string | string[];
     mock_success?: string | string[];
+    archetype?: string | string[];
+    status?: string | string[];
   };
 }
 
@@ -62,6 +64,8 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
   const token = typeof searchParams.token === "string" ? searchParams.token : Array.isArray(searchParams.token) ? searchParams.token[0] : undefined;
   const session_id = typeof searchParams.session_id === "string" ? searchParams.session_id : Array.isArray(searchParams.session_id) ? searchParams.session_id[0] : undefined;
   const mock_success = typeof searchParams.mock_success === "string" ? searchParams.mock_success : Array.isArray(searchParams.mock_success) ? searchParams.mock_success[0] : undefined;
+  const mockArchetypeParam = typeof searchParams.archetype === "string" ? searchParams.archetype : Array.isArray(searchParams.archetype) ? searchParams.archetype[0] : undefined;
+  const mockStatusParam = typeof searchParams.status === "string" ? searchParams.status : Array.isArray(searchParams.status) ? searchParams.status[0] : undefined;
 
   let isUnlocked = false;
   let isPendingSettlement = false;
@@ -173,6 +177,33 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
   // 3. Fallback for mock demo success (strictly limited to non-production development environments)
   if (!isUnlocked && mock_success === "true" && process.env.NODE_ENV !== "production") {
     isUnlocked = true;
+    if (mockArchetypeParam && VALID_ARCHETYPES.includes(mockArchetypeParam as AttachmentArchetype)) {
+      targetArchetype = mockArchetypeParam as AttachmentArchetype;
+    }
+    if (mockStatusParam && VALID_RELATIONSHIP_STATUSES.includes(mockStatusParam as RelationshipStatus)) {
+      relationshipStatus = mockStatusParam as RelationshipStatus;
+    }
+    if (targetArchetype === "Anxious-Preoccupied") {
+      anxiousPercent = 78;
+      avoidantPercent = 24;
+      anxiousRaw = 4.1;
+      avoidantRaw = 2.0;
+    } else if (targetArchetype === "Dismissive-Avoidant") {
+      anxiousPercent = 22;
+      avoidantPercent = 81;
+      anxiousRaw = 1.9;
+      avoidantRaw = 4.2;
+    } else if (targetArchetype === "Fearful-Avoidant") {
+      anxiousPercent = 76;
+      avoidantPercent = 74;
+      anxiousRaw = 4.0;
+      avoidantRaw = 3.9;
+    } else {
+      anxiousPercent = 24;
+      avoidantPercent = 20;
+      anxiousRaw = 2.0;
+      avoidantRaw = 1.8;
+    }
     try {
       activeToken = await signResultToken({
         resultId,
@@ -272,6 +303,8 @@ export default async function ReportPage({ params, searchParams }: ReportPagePro
     scoreData.avoidantRaw = avoidantRaw;
     scoreData.anxiousPercent = anxiousPercent;
     scoreData.avoidantPercent = avoidantPercent;
+    scoreData.conflictRaw = Number(Math.max(anxiousRaw, avoidantRaw, 2.2).toFixed(2));
+    scoreData.childhoodRaw = Number((((anxiousRaw + avoidantRaw) / 2) * 0.95).toFixed(2));
     scoreData.archetype = targetArchetype;
     const profile = ARCHETYPE_PROFILES[targetArchetype] || ARCHETYPE_PROFILES["Secure"];
     scoreData.archetypeTitle = profile.archetypeTitle;
