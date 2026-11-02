@@ -10,6 +10,8 @@ export function SiteHeader() {
     pathname?.startsWith("/quiz") ||
     pathname?.startsWith("/results") ||
     pathname?.startsWith("/report");
+  const hideRestoreLink =
+    pathname?.startsWith("/quiz") || pathname?.startsWith("/restore");
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-stone-50/90 border-b border-stone-200">
@@ -23,8 +25,17 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <div className="flex items-center space-x-4">
-          <div className="hidden sm:flex items-center text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          {!hideRestoreLink && (
+            <Link
+              href="/restore"
+              className="text-xs font-medium text-stone-500 hover:text-stone-900 transition"
+            >
+              Restore Report
+            </Link>
+          )}
+
+          <div className="hidden md:flex items-center text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1.5" />
             <span>Confidential & Anonymous</span>
           </div>

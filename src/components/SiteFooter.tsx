@@ -28,8 +28,13 @@ export function SiteFooter() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-stone-900 mb-3">Legal & Compliance</h4>
+            <h4 className="font-semibold text-stone-900 mb-3">Support &amp; Legal</h4>
             <ul className="space-y-2 text-xs">
+              <li>
+                <Link href="/restore" className="font-semibold text-rose-800 hover:text-rose-950 hover:underline">
+                  Restore Purchased Report
+                </Link>
+              </li>
               <li>
                 <Link href="/terms" className="hover:text-stone-900 hover:underline">
                   Terms of Service

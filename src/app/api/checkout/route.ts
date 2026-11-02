@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      validatedEmail = email.trim();
+      validatedEmail = email.trim().toLowerCase();
     }
 
     // 5. Validate Relationship Status
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
             unit_amount: 1499, // $14.99 in cents
             product_data: {
               name: "Full 8-Module Attachment & Relationship Shadow Assessment Report",
-              description: `Deep subconscious blueprint, 30-Day Rewiring Plan, and Partner Compatibility Analysis for ${authoritativeArchetype}.`,
+              description: `Deep subconscious blueprint, 30-Day Rewiring Plan & Compatibility Matrix (${authoritativeArchetype}). Restore anytime at ${appUrl.replace(/^https?:\/\//, "")}/restore`,
               tax_code: "txcd_10000000",
               images: [
                 "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=600&q=80",

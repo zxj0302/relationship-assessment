@@ -468,7 +468,7 @@ export function TeaserView() {
           <div className="space-y-3">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-stone-300 mb-1.5 text-left">
-                Where should we send your private report &amp; portal link?
+                Enter your email for your Stripe receipt &amp; anytime report recovery
               </label>
               <input
                 id="email"
@@ -526,12 +526,14 @@ export function TeaserView() {
           <p className="text-[11px] text-stone-400 leading-relaxed">
             If this assessment does not provide profound clarity into your relationship patterns, email {APP_CONFIG.supportEmail} within 14 days for an immediate 100% refund. No questions asked.
           </p>
-          <div className="flex items-center justify-center gap-4 text-[11px] text-stone-500 pt-1">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-stone-500 pt-1">
             <span>🔒 256-Bit SSL Encrypted</span>
             <span>•</span>
-            <span>Powered by Stripe</span>
+            <span>Official Stripe Receipt</span>
             <span>•</span>
-            <span>Instant Email Delivery</span>
+            <Link href="/restore" className="underline hover:text-stone-300">
+              Anytime Report Restore
+            </Link>
           </div>
         </div>
       </div>
